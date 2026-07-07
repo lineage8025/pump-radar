@@ -1,0 +1,18 @@
+---
+# Portainer git-stack 部署用（Synology NAS，模式同 crypto-pulse）。
+# 唯一 bind：logs（journal / state 落地，File Station 可見）。webhook 由 stack env 注入，不進版控。
+services:
+  pump-radar:
+    build: .
+    image: pump-radar:latest
+    container_name: pump-radar
+    restart: unless-stopped
+    environment:
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+      - PAIRS=${PAIRS:-BTC/USDT,ETH/USDT,ADA/USDT,SOL/USDT}
+      - EXCHANGE=${EXCHANGE:-binance}
+    volumes:
+      - /volume1/docker/pump-radar/logs:/app/logs
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - while true; do python /app/scripts/pump_detect.py; sleep 60; done
