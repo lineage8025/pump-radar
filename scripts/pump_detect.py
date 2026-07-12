@@ -26,6 +26,14 @@ STATE_FILE = LOG_DIR / ".pump_state.json"
 FETCH_BARS = PARAMS["bbw_pct_window"] + PARAMS["bb_window"] + 50
 TAIPEI = timezone(timedelta(hours=8))
 
+# 同型訊號的樣本內歷史分佈（2026-05-01~07-07，10 標的 235 事件，score_signals 口徑：
+# 次根開盤進場、24h 窗、淨值含 0.2% 費）。是歷史統計不是預測——次根方向預測為紅線
+# （DirProbe 92k 樣本證偽）。forward 結算若與此顯著偏離，照 DETECTOR_PREREG 更新數字。
+GRADE_STATS = {
+    "A": {"n": 64, "mfe": "+1.3%", "mae": "−1.4%", "net": "−0.4%", "win": 40, "tail": 14},
+    "B": {"n": 171, "mfe": "+1.4%", "mae": "−2.0%", "net": "−0.5%", "win": 40, "tail": 26},
+}
+
 
 def fetch_15m(ex, pair: str) -> pd.DataFrame:
     rows, since = [], ex.milliseconds() - FETCH_BARS * 15 * 60 * 1000
@@ -92,12 +100,16 @@ def main() -> None:
             f.write(json.dumps(ev, ensure_ascii=False) + "\n")
         tpe = last_bar["date"].astimezone(TAIPEI).strftime("%m-%d %H:%M")
         squeeze = "壓縮後爆發" if ev["grade"] == "A" else "放量突破"
+        st_g = GRADE_STATS[ev["grade"]]
         try:
             notify_discord(
                 f"🚀 **[{ev['grade']}] {pair}** 15m 波段啟動（{squeeze}）\n"
                 f"收盤 {ev['close']:g} 上穿布林上軌 | vol_z={ev['vol_z']} "
                 f"bbw_pct={ev['bbw_pct']} | {tpe} 台北\n"
-                f"-# 偵測追蹤用，含費淨值由 score_signals 事後對帳，非買賣建議"
+                f"👉 同型訊號歷史（{ev['grade']} 級 n={st_g['n']}）：24h 典型先衝 "
+                f"{st_g['mfe']}、回檔 {st_g['mae']}；跟單淨值中位 {st_g['net']}"
+                f"（勝率 {st_g['win']}%），重挫 ≤−3% 機率 {st_g['tail']}%\n"
+                f"-# 樣本內統計非預測；追漲期望為負，forward 由 score_signals 對帳，非買賣建議"
             )
         except Exception as e:
             print(f"[pump] discord notify failed: {e}", flush=True)
