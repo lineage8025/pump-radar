@@ -16,6 +16,11 @@
 - live 模式 = sh 迴圈每 60s 喚起 `pump_detect.py` 單趟（crash-safe）；只處理已收盤 K 棒（最後一根未收盤，抓完即丟）。
 - 偵測邏輯只住在 `detector.py`，live/回放共用——改邏輯絕不能只改其中一邊。
 - 狀態檔 `logs/.pump_state.json`（last_seen / cooldown_until，ISO 字串直接比大小）。
+- **訊息「漲跌展望」行**由 `stats_engine.py` 供給：同型訊號歷史分佈（ret_24h 分位數＋MFE/MAE），
+  forward 滿 24h 自動計分入池（快取 `logs/.scored_forward.tsv`）、滾動 120 天窗、每日重算
+  （`logs/.grade_stats.json`，失敗退回上次/種子）。**是分佈不是方向預測**；計分函式與
+  score_signals 共用不得分岔；p25~p75 覆蓋率校準檢查已預登記（DETECTOR_PREREG）。
+  種子 `data/insample_scored.tsv` 是樣本內 235 筆的計分明細，動它=動基準，別碰。
 
 ## 部署（Synology NAS，同 crypto-pulse 模式）
 - Portainer git-stack 指向本 repo `main`；push 後手動 Pull and redeploy。
