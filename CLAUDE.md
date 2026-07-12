@@ -16,6 +16,12 @@
 - live 模式 = sh 迴圈每 60s 喚起 `pump_detect.py` 單趟（crash-safe）；只處理已收盤 K 棒（最後一根未收盤，抓完即丟）。
 - 偵測邏輯只住在 `detector.py`，live/回放共用——改邏輯絕不能只改其中一邊。
 - 狀態檔 `logs/.pump_state.json`（last_seen / cooldown_until，ISO 字串直接比大小）。
+- **每日結果日報**（2026-07-12 起）：sidecar 容器 `pump-radar-pulse`（sh 迴圈 25 分）喚起
+  `daily_pulse_dispatch.py`，台北 09:00 邊界＋marker 補發語意（同 crypto-pulse digest 教訓），
+  聚合 24h 新訊號＋剛滿 24h 的結算成績 → dispatch[daily-pulse] →
+  `.github/workflows/claude-daily-pulse.yml` Claude 寫 ≤10 行日報推 Discord。
+  安靜日（無新訊號且無新結算）NAS 端直接跳過。已回報結算列記於 `logs/.daily_pulse_state.json`
+  防重複。repo secrets 需 `CLAUDE_CODE_OAUTH_TOKEN` + `DISCORD_WEBHOOK_URL`。
 - **訊息「漲跌展望」行**由 `stats_engine.py` 供給：同型訊號歷史分佈（ret_24h 分位數＋MFE/MAE），
   forward 滿 24h 自動計分入池（快取 `logs/.scored_forward.tsv`）、滾動 120 天窗、每日重算
   （`logs/.grade_stats.json`，失敗退回上次/種子）。**是分佈不是方向預測**；計分函式與

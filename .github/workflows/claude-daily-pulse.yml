@@ -1,0 +1,53 @@
+name: Claude Daily Pulse
+
+# Fired daily (台北 09:00) by the NAS sidecar via repository_dispatch with
+# aggregated signal/scoring data. Claude writes a short results digest to Discord.
+# Quiet days are skipped NAS-side — if this runs, there is something to report.
+on:
+  repository_dispatch:
+    types: [daily-pulse]
+
+jobs:
+  pulse:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Write daily pulse with Claude
+        uses: anthropics/claude-code-action@v1
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            這是 pump-radar（15m 布林帶波段啟動偵測器）過去 24h 的聚合數據：
+            ${{ toJSON(github.event.client_payload) }}
+
+            你的任務：寫一份「每日結果日報」推到 Discord。先讀 CLAUDE.md 了解專案定位——
+            這是偵測追蹤器不是交易系統，樣本內基準 net_24h 為負（追漲無優勢），
+            forward 數據是唯一裁判，日報的意義是誠實對帳，不是報喜。
+
+            解讀要點：
+            1. new_signals_24h：昨天觸發了哪些（標的/級別/vol_z）。A 級=壓縮後爆發、B 級=放量突破。
+            2. newly_scored：剛滿 24h 的訊號結算成績（net_24h 含 0.2% 費）。逐筆一行，
+               對比 insample_baseline（mean −0.37%、勝率 40%）說這批比基準好還是差。
+            3. forward_progress：累積 scored_total/target 進度；forward 累計 net 均值與勝率
+               vs 基準。樣本 <30 一律強調「樣本不足勿下結論」。
+            4. 結尾一句誠實觀察（有就說、沒有就說今天沒有新資訊）。
+
+            輸出：先用 Write 把 {"content":"..."} JSON 寫到 /tmp/discord.json——
+            內容 ≤10 行、繁體中文、開頭「📡 pump-radar 日報 <date_taipei>」、
+            數字保留一位小數、不要 code block——然後：
+            curl -sS -H "Content-Type: application/json" -d @/tmp/discord.json "$DISCORD_WEBHOOK_URL"
+
+            注意：Bash 保持單行簡單形式（不要 heredoc / $() 命令替換）；
+            不要開 issue、不要改任何檔案；全程繁體中文。
+          claude_args: |
+            --allowedTools "Read,Grep,Glob,Write,Bash"
+            --max-turns 15

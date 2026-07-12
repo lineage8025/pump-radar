@@ -17,3 +17,21 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - while true; do python /app/scripts/pump_detect.py; sleep 60; done
+
+  # 每日結果日報 sidecar：sh 迴圈每 ~25 分喚起，腳本自判「過了台北 09:00 且 marker 過期」
+  # 才聚合並發 dispatch[daily-pulse]（GitHub Actions 上的 Claude 寫日報推 Discord）。
+  # 無新訊號且無新結算的安靜日自動跳過。缺 dispatch env 時 no-op，不影響偵測主流程。
+  pump-radar-pulse:
+    image: pump-radar:latest
+    container_name: pump-radar-pulse
+    restart: unless-stopped
+    depends_on:
+      - pump-radar
+    environment:
+      - GITHUB_DISPATCH_TOKEN=${GITHUB_DISPATCH_TOKEN:-}
+      - GITHUB_DISPATCH_REPO=${GITHUB_DISPATCH_REPO:-}
+    volumes:
+      - /volume1/docker/pump-radar/logs:/app/logs
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - while true; do python /app/scripts/daily_pulse_dispatch.py; sleep 1500; done

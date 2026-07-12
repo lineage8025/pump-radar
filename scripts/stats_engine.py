@@ -58,6 +58,8 @@ def _summarize(pool: pd.DataFrame, fw_ts: set) -> dict:
 def refresh(journal: Path, cache: Path, stats_file: Path) -> None:
     """增量計分 forward journal → 併種子池 → 滾動窗統計 → 寫 stats JSON。"""
     scored = pd.read_csv(cache, sep="\t") if cache.exists() else pd.DataFrame(columns=COLS)
+    if len(scored):  # 防兩容器同刻 refresh 造成的重複列
+        scored = scored.drop_duplicates(subset=["ts", "pair"], ignore_index=True)
     events = []
     if journal.exists():
         events = [json.loads(l) for l in journal.read_text().splitlines()
