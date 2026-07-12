@@ -18,10 +18,11 @@ Discord 即時通知，每則訊號落 journal，計分器事後誠實對帳。
 3. 量能 z-score ≥ 3（基準 = 前 24h，排除當根）
 
 **A 級** = 觸發前 BBW 百分位（30 天回看）≤ 25%（教科書式壓縮後爆發）；其餘 **B 級**。
-同標的 4h 冷卻。標的：BTC/ETH/ADA/SOL（Binance 現貨公開行情，無需 API key）。
+同標的 4h 冷卻。標的：BTC/ETH/ADA/SOL/XRP/DOGE/BNB/LINK/LTC/AVAX（Binance 現貨
+公開行情，無需 API key；2026-07-07 擴編 10 標的加速樣本累積，參數判準未動）。
 
 驗證：2026-07-06 的盤中 V 型反彈（低點 +5~7%），BTC/ETH/ADA 皆於 15:45 UTC 觸發，
-SOL 於 21:00 UTC 觸發。事件頻率全組約 1.6 則/天。
+SOL 於 21:00 UTC 觸發。事件頻率全組約 3.5 則/天（100 筆 forward 約 1 個月）。
 
 ## 結構
 

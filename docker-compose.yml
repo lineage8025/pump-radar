@@ -9,7 +9,8 @@ services:
     restart: unless-stopped
     environment:
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
-      - PAIRS=${PAIRS:-BTC/USDT,ETH/USDT,ADA/USDT,SOL/USDT}
+      # 2026-07-07 擴編 10 標的：加速 forward 樣本累積（偵測參數不變，詳 DETECTOR_PREREG）
+      - PAIRS=${PAIRS:-BTC/USDT,ETH/USDT,ADA/USDT,SOL/USDT,XRP/USDT,DOGE/USDT,BNB/USDT,LINK/USDT,LTC/USDT,AVAX/USDT}
       - EXCHANGE=${EXCHANGE:-binance}
     volumes:
       - /volume1/docker/pump-radar/logs:/app/logs

@@ -62,7 +62,9 @@ def main() -> None:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {}
     pairs = [p.strip() for p in os.environ.get(
-        "PAIRS", "BTC/USDT,ETH/USDT,ADA/USDT,SOL/USDT").split(",")]
+        "PAIRS",
+        "BTC/USDT,ETH/USDT,ADA/USDT,SOL/USDT,XRP/USDT,"
+        "DOGE/USDT,BNB/USDT,LINK/USDT,LTC/USDT,AVAX/USDT").split(",")]
     ex = getattr(ccxt, os.environ.get("EXCHANGE", "binance"))()
 
     for pair in pairs:
