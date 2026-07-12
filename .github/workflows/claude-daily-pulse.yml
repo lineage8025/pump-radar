@@ -39,7 +39,11 @@ jobs:
                對比 insample_baseline（mean −0.37%、勝率 40%）說這批比基準好還是差。
             3. forward_progress：累積 scored_total/target 進度；forward 累計 net 均值與勝率
                vs 基準。樣本 <30 一律強調「樣本不足勿下結論」。
-            4. 結尾一句誠實觀察（有就說、沒有就說今天沒有新資訊）。
+            4. regime_sentinel：BTC 4h align_share 是已封存的 crypto-pulse 4h 趨勢策略的
+               重啟條款哨兵（>=0.5 持續 30 天 → 重開 dry-run）。一行報「讀數 X.XX、
+               連續達標 N/30 天」；燈剛亮或剛熄要明說；滿 30 天當天用醒目一行宣告
+               「重啟條款達標」。讀數 null 就說本日讀取失敗。
+            5. 結尾一句誠實觀察（有就說、沒有就說今天沒有新資訊）。
 
             輸出：先用 Write 把 {"content":"..."} JSON 寫到 /tmp/discord.json——
             內容 ≤10 行、繁體中文、開頭「📡 pump-radar 日報 <date_taipei>」、

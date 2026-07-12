@@ -13,7 +13,7 @@
 import json
 import os
 import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -28,6 +28,46 @@ MARKER = LOG_DIR / ".daily_pulse_marker"
 STATE = LOG_DIR / ".daily_pulse_state.json"
 BOUNDARY_HOUR_UTC = 1  # 01:00 UTC = 台北 09:00
 TARGET_N = 100
+
+
+def btc_align_share() -> float | None:
+    """crypto-pulse V2CE45 重啟哨兵：BTC 4h 近 42 根 EMA20>50>100 佔比（radar 停播後由日報接手）。"""
+    try:
+        import ccxt
+        ex = ccxt.binance()
+        c = pd.Series([r[4] for r in ex.fetch_ohlcv("BTC/USDT", "4h", limit=250)])
+        e = {n: c.ewm(span=n, adjust=False).mean() for n in (20, 50, 100)}
+        al = (e[20] > e[50]) & (e[50] > e[100])
+        return round(float(al.tail(42).mean()), 2)
+    except Exception as e:
+        print(f"[pulse] align_share failed: {e}", flush=True)
+        return None
+
+
+def update_sentinel(state: dict, align: float | None, today: date) -> tuple[dict, bool]:
+    """更新連續達標狀態；回傳 (payload 用的哨兵資訊, 是否有狀態變化需強制發報)。"""
+    sent = state.setdefault("sentinel", {})
+    changed = False
+    if align is None:
+        return {"btc_4h_align_share": None, "note": "本日讀取失敗"}, False
+    if align >= 0.5:
+        if not sent.get("above_since"):
+            sent["above_since"] = today.isoformat()
+            changed = True  # 燈剛亮
+    else:
+        if sent.get("above_since"):
+            changed = True  # 燈熄了
+        sent["above_since"] = None
+        sent["reported_30d"] = False
+    days = ((today - date.fromisoformat(sent["above_since"])).days + 1
+            if sent.get("above_since") else 0)
+    if days >= 30 and not sent.get("reported_30d"):
+        sent["reported_30d"] = True
+        changed = True  # 滿 30 天，重啟條款達標
+    info = {"btc_4h_align_share": align, "threshold": 0.5,
+            "days_above": days, "target_days": 30,
+            "note": "crypto-pulse 4h 趨勢策略（已封存）重啟條款哨兵：>=0.5 持續 30 天"}
+    return info, changed
 
 
 def latest_boundary(now: datetime) -> datetime:
@@ -89,8 +129,12 @@ def main() -> None:
              "mae_pct": round(r.mae_24h * 100, 2)}
             for r in fresh.itertuples()]
 
-    if not new_signals and not newly_scored:
+    sentinel, sentinel_changed = update_sentinel(
+        state, btc_align_share(), (now + timedelta(hours=8)).date())  # 台北日界
+
+    if not new_signals and not newly_scored and not sentinel_changed:
         MARKER.touch()
+        STATE.write_text(json.dumps(state))  # 哨兵連續天數照常累計
         print(f"[pulse {hb}] nothing new, skip day", flush=True)
         return
 
@@ -108,6 +152,7 @@ def main() -> None:
         "forward_progress": progress,
         "insample_baseline": {"net_24h_mean_pct": -0.37, "win_pct": 40,
                               "note": "2026-05-01~07-07, 10 pairs, 235 events"},
+        "regime_sentinel": sentinel,
         "grade_stats": stats_engine.load_stats(STATS_FILE),
     }
     try:

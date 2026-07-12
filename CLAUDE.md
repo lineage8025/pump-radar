@@ -22,6 +22,8 @@
   `.github/workflows/claude-daily-pulse.yml` Claude 寫 ≤10 行日報推 Discord。
   安靜日（無新訊號且無新結算）NAS 端直接跳過。已回報結算列記於 `logs/.daily_pulse_state.json`
   防重複。repo secrets 需 `CLAUDE_CODE_OAUTH_TOKEN` + `DISCORD_WEBHOOK_URL`。
+  日報兼任 **crypto-pulse 重啟哨兵**（radar 停播後接手）：每日算 BTC 4h align_share(42)，
+  連續達標天數記在 state；燈亮/熄/滿 30 天（重啟條款達標）即使安靜日也強制發報。
 - **訊息「漲跌展望」行**由 `stats_engine.py` 供給：同型訊號歷史分佈（ret_24h 分位數＋MFE/MAE），
   forward 滿 24h 自動計分入池（快取 `logs/.scored_forward.tsv`）、滾動 120 天窗、每日重算
   （`logs/.grade_stats.json`，失敗退回上次/種子）。**是分佈不是方向預測**；計分函式與
