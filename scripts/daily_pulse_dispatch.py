@@ -110,7 +110,10 @@ def main() -> None:
                               "note": "2026-05-01~07-07, 10 pairs, 235 events"},
         "grade_stats": stats_engine.load_stats(STATS_FILE),
     }
-    code = dispatch(token, repo, payload)
+    try:
+        code = dispatch(token, repo, payload)
+    except urllib.error.HTTPError as e:
+        code = e.code  # 403=PAT 沒圈本 repo；marker 不 touch，下次喚醒重試
     if code == 204:
         MARKER.touch()
         state["reported"] += [s["ts"] + s["pair"] for s in newly_scored]
