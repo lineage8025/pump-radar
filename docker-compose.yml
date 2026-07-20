@@ -5,6 +5,7 @@ services:
   pump-radar:
     build: .
     image: pump-radar:latest
+    pull_policy: build   # 本地 build image；缺這行 Portainer GitOps 的 compose pull 會去 Hub 拉而失敗
     container_name: pump-radar
     restart: unless-stopped
     environment:
@@ -23,6 +24,7 @@ services:
   # 無新訊號且無新結算的安靜日自動跳過。缺 dispatch env 時 no-op，不影響偵測主流程。
   pump-radar-pulse:
     image: pump-radar:latest
+    pull_policy: never   # 共用主服務本地 build 的 image，不上 Hub 拉
     container_name: pump-radar-pulse
     restart: unless-stopped
     depends_on:
