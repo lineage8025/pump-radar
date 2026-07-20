@@ -1,0 +1,41 @@
+# CD：main 上程式碼路徑變動 → smoke 閘門 → 推 deploy 分支（NAS Portainer stack 5 輪詢自動重佈）
+# 與 radar-desk 同套路（其 RUNBOOK「CD」章）；data/、docs/ 不觸發。
+name: Deploy
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/**"
+      - "docker-compose.yml"
+      - "Dockerfile"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with: { fetch-depth: 1 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install pandas
+      - run: python scripts/smoke_test.py
+
+  promote:
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with: { fetch-depth: 0 }
+      # deploy 分支只由本 workflow 推進；非快轉直接失敗保護
+      - run: git push origin ${GITHUB_SHA}:refs/heads/deploy
