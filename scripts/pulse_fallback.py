@@ -35,15 +35,17 @@ def minimax_digest(payload: dict, api_key: str) -> str:
         data=json.dumps({
             "model": MINIMAX_MODEL,
             "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 1500,
+            "max_tokens": 6144,
         }).encode())
     body = json.loads(urllib.request.urlopen(req, timeout=90).read().decode())
     if body.get("error"):
         raise RuntimeError(f"minimax error: {body['error']}")
+    if body["choices"][0].get("finish_reason") != "stop":
+        raise RuntimeError(f"finish_reason={body['choices'][0].get('finish_reason')}")
     text = body["choices"][0]["message"]["content"]
-    text = re.sub(r"<think>.*?</think>", "", text, flags=re.S).strip()  # M2 推理殘留剝除
-    if not text:
-        raise RuntimeError("minimax empty content")
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.S).strip()  # 推理殘留剝除
+    if not text or "<think>" in text:   # 空白或未閉合（max_tokens 截斷）都算失敗
+        raise RuntimeError("minimax empty/truncated content")
     return f"📡 pump-radar 日報 {payload.get('date_taipei', '')}（MiniMax 代筆）\n{text}"
 
 
