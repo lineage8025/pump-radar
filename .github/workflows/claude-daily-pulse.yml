@@ -19,7 +19,11 @@ jobs:
         with:
           fetch-depth: 1
 
+      # force_fallback=true 的 dispatch 會跳過 Claude 直接測 fallback 鏈（永久測試鉤子）
       - name: Write daily pulse with Claude
+        id: claude
+        if: github.event.client_payload.force_fallback != true
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -55,3 +59,15 @@ jobs:
           claude_args: |
             --allowedTools "Read,Grep,Glob,Write,Bash"
             --max-turns 15
+
+      # 第 2/3 層 fallback：Claude 失敗或被 force_fallback 跳過 → MiniMax 代筆 → 純數字模板
+      - name: Fallback digest (MiniMax → template)
+        if: steps.claude.outcome == 'failure' || steps.claude.outcome == 'skipped'
+        env:
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          cat > /tmp/payload.json <<'PULSE_PAYLOAD_EOF'
+          ${{ toJSON(github.event.client_payload) }}
+          PULSE_PAYLOAD_EOF
+          python scripts/pulse_fallback.py --payload /tmp/payload.json
