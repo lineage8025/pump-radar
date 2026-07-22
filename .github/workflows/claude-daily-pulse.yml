@@ -22,7 +22,7 @@ jobs:
       # force_fallback=true 的 dispatch 會跳過 Claude 直接測 fallback 鏈（永久測試鉤子）
       - name: Write daily pulse with Claude
         id: claude
-        if: github.event.client_payload.force_fallback != true
+        if: github.event.client_payload.force_fallback != true && github.event.client_payload.force_fallback != 'true'
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         env:
