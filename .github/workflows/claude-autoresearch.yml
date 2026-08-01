@@ -19,7 +19,8 @@ on:
         description: "本次運行聚焦的問題（如 Q1；可留空，留空則照 program.md 優先序自選）"
         required: false
         type: string
-  # 夜間班：台北 02:05 / 03:35 / 05:05 / 06:35（cron 是 UTC，台北 = UTC+8）。
+  # 夜間班（**只測 2026-08-02 一晚**，見下方 SCHEDULE_UNTIL 自我到期閘）：
+  # 台北 02:05 / 03:35 / 05:05 / 06:35（cron 是 UTC，台北 = UTC+8）。
   # 間隔 90 分鐘＝job timeout 上限，避免前一輪還沒跑完就撞上 concurrency 佇列被頂掉。
   # 分鐘刻意錯開整點：GitHub 排程在整點負載高，常延遲數十分鐘甚至被丟棄。
   # 排程事件沒有 inputs.focus（空值），agent 會照 program.md 優先序自選題目。
@@ -32,6 +33,12 @@ on:
 concurrency:
   group: autoresearch
   cancel-in-progress: false
+
+env:
+  # 排程自我到期（台北日期，含當日）。GitHub cron 沒有「只跑一次」，所以改成
+  # 過期後 gate step 直接跳過、不喚醒 agent——不必靠人記得去 Disable workflow。
+  # 想續跑就改這個日期；手動 workflow_dispatch 不受此限。
+  SCHEDULE_UNTIL: "2026-08-02"
 
 jobs:
   research:
@@ -48,21 +55,42 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
+      # 排程到期閘：過期的排程在這裡就停（幾秒、public repo 不計費），不喚醒 agent。
+      # 用 python3 算台北日期而非 TZ=Asia/Taipei date——後者在缺 tzdata 的環境會悄悄退回 UTC，
+      # 而 UTC 與台北跨日不同步，剛好會讓到期判斷差一天。
+      - name: Schedule expiry gate
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"; echo "手動觸發，不受排程期限限制"; exit 0
+          fi
+          TODAY="$(python3 -c 'import datetime,zoneinfo;print(datetime.datetime.now(zoneinfo.ZoneInfo("Asia/Taipei")).date())')"
+          if [[ "$TODAY" > "$SCHEDULE_UNTIL" ]]; then
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::排程已於 $SCHEDULE_UNTIL 到期（台北今天 $TODAY），跳過本次運行"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"; echo "排程有效（台北今天 $TODAY ≤ $SCHEDULE_UNTIL）"
+          fi
+
       - name: Checkout repository
+        if: steps.gate.outputs.go == 'true'
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
       # 對齊 Dockerfile 的 python:3.12-slim；runner 預設沒有 pandas/pyarrow
       - name: Set up Python
+        if: steps.gate.outputs.go == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install analysis deps
+        if: steps.gate.outputs.go == 'true'
         run: pip install --quiet pandas pyarrow
 
       - name: Run research cycle with Claude
+        if: steps.gate.outputs.go == 'true'
         uses: anthropics/claude-code-action@v1
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -95,7 +123,7 @@ jobs:
       # 機器強制紅線：agent 推上 main 的變更只能落在四個可寫路徑，LEDGER 只能追加。
       # 越界 → revert（失敗則 force 回基準）＋ Discord 告警 ＋ job fail。
       - name: Guard research-only pushes
-        if: always()
+        if: always() && steps.gate.outputs.go == 'true'
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
@@ -134,7 +162,7 @@ jobs:
 
       # 無聲失敗防線：OAuth 壞掉、max-turns 耗盡、job timeout 等 agent 自己報不了的情況
       - name: Notify failure
-        if: failure()
+        if: failure() && steps.gate.outputs.go == 'true'
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |

@@ -31,8 +31,10 @@
   種子 `data/insample_scored.tsv` 是樣本內 235 筆的計分明細，動它=動基準，別碰。
 
 ## 自主研究迴圈（autoresearch，2026-08-01 起）
-- `.github/workflows/claude-autoresearch.yml`，**夜間排程班**（2026-08-02 起，台北 02:05/03:35/05:05/06:35 各一輪，cron 寫 UTC）＋隨時可手動 `workflow_dispatch`（可帶 `focus`）。設計借自 karpathy/autoresearch 的 program.md 模式；**與 crypto-pulse 的「不排程」拍板不同**，此處刻意排程以吃掉夜間閒置額度。
-- 排程雷：①`schedule` 事件的 `github.actor` 不保證是 repo owner，觸發者閘要加 `github.event_name == 'schedule'` 否則靜默不執行；②cron 分鐘錯開整點（整點負載高易延遲/丟棄）；③間隔 90 分鐘＝job timeout 上限，避免撞 `concurrency` 佇列被頂掉。
+- `.github/workflows/claude-autoresearch.yml`，**夜間排程班**（台北 02:05/03:35/05:05/06:35 各一輪，cron 寫 UTC）＋隨時可手動 `workflow_dispatch`（可帶 `focus`）。設計借自 karpathy/autoresearch 的 program.md 模式。
+- **排程是自我到期的**：GitHub cron 沒有「只跑一次」，所以用 env `SCHEDULE_UNTIL`（台北日期，含當日）＋第一個 gate step 控制——過期的排程幾秒內跳過、不喚醒 agent，不必靠人記得去 Disable。**目前設 `2026-08-02`＝只測那一晚**；要續跑就改這個日期。手動觸發不受此限。
+- 排程雷：①`schedule` 事件的 `github.actor` 不保證是 repo owner，觸發者閘要加 `github.event_name == 'schedule'` 否則靜默不執行；②cron 分鐘錯開整點（整點負載高易延遲/丟棄）；③間隔 90 分鐘＝job timeout 上限，避免撞 `concurrency` 佇列被頂掉；④gate 算台北日期要用 python3 zoneinfo，`TZ=Asia/Taipei date` 在缺 tzdata 的環境會悄悄退回 UTC 而差一天。
+- Actions 分鐘數不計費（public repo 用標準 GitHub-hosted runner 免費），**唯一成本是 Claude 訂閱額度**。
 - **夜間班節流**（program.md §2.1）：一晚 4 輪但 backlog 工作量遠少於 4 輪，沒事做的輪次規定寫 `status=blocked` 後結束，禁止重跑已完成探針或換角度重切同一份數據充數——帳本連續 `blocked` 是「backlog 空了」的訊號，補題或關排程由人決定。
 - **與 crypto-pulse 版的關鍵差異**：forward journal 在 NAS、日報只推 Discord 不留存，**CI 拿不到 forward 證據**，所以主業不是覆盤 forward，而是**執行 `docs/RND_BACKLOG.md` 的離線探針**——資料由 `research/fetch_klines.py` 從 data.binance.vision 抓（**不用 ccxt**：美國 runner 打 api.binance.com 會 451），全程無 API key。
 - 協定 `research/program.md`（對 agent 唯讀）、積壓清單 `research/backlog.md`（agent 唯一可直接編輯的協定檔）、人格 `.claude/agents/researcher.md`、帳本 `research/LEDGER.tsv`（append-only）。
