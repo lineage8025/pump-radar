@@ -8,24 +8,28 @@
 
 ## 問題清單
 
-- **Q1 `probe` open** — **Phase 0：`bbw_pct` 對後續振幅有無區別力。**
-  照 `program.md` §4 的凍結網格跑（六分桶 × T=1/4/12/24h × p50/p80/p95，每格附 n）。
-  **分析窗口預登記：2025-01-01 ~ 2026-06-30**（抓資料時起點提前到 `2024-12` 當暖機月，
-  丟棄 `bbw_pct` 為 null 的列）；**標的預登記：`docker-compose.yml` 的 10 個 PAIRS**。
-  窗口與標的登記於本行，**結果出來後不得為了改善結果而變更**。
-  驗收：能明確讀出「壓縮狀態下，區間放多寬才有 80% 機率撐過 T 小時」。
-  Kill：若各分桶分佈重疊、24h 檔也無區別力 → 依 `docs/RND_BACKLOG.md` kill criteria **終止方向一**，
-  照實記錄，不得改網格重跑。
-
-- **Q2 `probe` watching（等 Q1 完成）** — **Phase 0.5：現行 `event` 是不是好的波動爆發預警。**
+- **Q2 `probe` open**（2026-08-01 解封，原 watching 等 Q1）— **Phase 0.5：現行 `event` 是不是好的波動爆發預警。**
   比較「`event` 觸發後 24h 振幅」vs「隨機時點 24h 振幅」的分佈。
   對照組取樣需避開事件叢集，沿用 `docs/DETECTOR_PREREG.md` 已預登記的「同 4h 窗僅計首發」視角。
   注意：這與「追價期望為負」不衝突——kill-switch 不需要方向，只需要振幅。
   但**不得**因此改寫偵測器的定位敘述（那是人類的事）。
+  **2026-08-01 run 1 提醒**：Q1 發現 `bbw_pct` 低（壓縮）對應的是「24h 振幅更小」而非更大
+  （見 `research/log/2026-08-01.md`），`event` 的 A 級門檻正是「觸發前壓縮」——執行 Q2 時
+  這個前置條件對振幅可能是負向貢獻，若 `event` 後振幅仍大於隨機時點，貢獻大概率來自
+  `vol_z≥3.0` 放量條件而非壓縮本身，解讀時要把這個拆解寫清楚，不能只看表面比較。
 
-- **Q3 `audit` open** — **樣本內基準可重算性。** `docs/DETECTOR_PREREG.md` 引用的樣本內基準
-  （net_24h mean、勝率、A/B 級 MAE 中位數）能否用 `data/insample_scored.tsv` 的 235 筆逐筆重算出來？
-  對不上就逐項列出差異與可能原因。**只覆核，不修正**——兩份檔案對你都唯讀。
+- **Q1'** `probe` open（2026-08-01 新增，承接 Q1 最強反駁）— **Phase 0 結果的 block bootstrap
+  穩健性覆核。** `research/log/2026-08-01.md` 的最強反駁指出：逐樣本 bootstrap 可能因跨標的
+  同期相關（宏觀 regime 齊漲跌）系統性低估 CI 寬度，5450 筆「獨立樣本」的有效自由度可能遠
+  小於表面值。用同一份既有結果（`research/experiments/2026-08-01_phase0_bbw_amplitude_samples.tsv`）
+  改用按週或按標的分塊的 block bootstrap 重估最低桶 vs 最高桶 24h p80 差距的 CI，
+  若下界仍 >0 → Q1 結論穩健，補記 ledger；若下界 ≤0 → Q1 結論需降級為「未證實」，
+  同樣補記 ledger 並回頭更新 `research/log/2026-08-01.md` 的狀態註記（append 方式，不得
+  刪改原文）。**這不是「換分桶/換T重跑」，是同一分析的穩健性覆核，不受 frontier 兩階段
+  閘門限制**——沿用同一份凍結網格與同一批樣本，只改重抽方法。
+
+- **Q3 `audit` closed（2026-08-01）** — 樣本內基準可重算性：**完全重算一致，無差異**。
+  見「已結案」段。
 
 - **Q4 `tooling` open** — **forward 證據盲點。** 本迴圈在 CI 內看不到任何 forward 數據
   （journal 在 NAS、日報只推 Discord 不留存）。提案：讓 `daily_pulse_dispatch.py` 的 payload
@@ -59,4 +63,13 @@
 
 ## 已結案
 
-（尚無）
+- **Q1**（closed 2026-08-01）— Phase 0：`bbw_pct` 對後續振幅有無區別力。
+  結論：**有區別力**（六分桶在 4 個 T 上單調遞增，24h 檔最低桶 vs 最高桶 p80 差距
+  bootstrap 95% CI [+2.14,+3.46]pp，下界 >0），未觸發 kill criteria。方向與「壓縮後爆發」
+  直覺相反——是波動持續性主導、非均值回歸反轉。**信賴區間穩健性未覆核**（見最強反駁，
+  已開 Q1' 承接）。詳見 `research/log/2026-08-01.md`、
+  `research/experiments/2026-08-01_phase0_bbw_amplitude.py`。
+- **Q3**（closed 2026-08-01）— 樣本內基準可重算性：`data/insample_scored.tsv` 235 筆逐筆重算，
+  與 `docs/DETECTOR_PREREG.md` 引用的原 4 標的基準（n=102/107 事件）與全 10 標的分級分佈表
+  （n=235）**全部數字完全相符，無差異**。詳見
+  `research/experiments/2026-08-01_q3_audit_insample.py`。

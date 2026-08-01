@@ -1,1 +1,2 @@
 date	run	questions	lane	status	summary
+2026-08-01	1	Q1,Q3	probe,audit	supports	Phase0六桶24h振幅單調遞增,最低vs最高桶p80差距CI[+2.14,+3.46]pp不含0,方向為持續性非反轉;Q3樣本內基準235筆重算完全相符
