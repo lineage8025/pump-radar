@@ -124,7 +124,7 @@ def report_vs_random(label: str, sub_df: pd.DataFrame, random_df: pd.DataFrame, 
           f"（隨機時點對照 n={len(random_df)}: p50={rp50:.3f}% p80={rp80:.3f}%）")
     if n < 30:
         print(f"[{label}] n<30，以下 CI 僅供參考，不得判定有/無區別力。")
-    diffs = block_bootstrap_quantile_diff(random_df, sub_df, 0.80, rng)
+    diffs = block_bootstrap_quantile_diff(random_df, sub_df, 0.80, rng) * 100
     ci = np.quantile(diffs, [0.025, 0.975])
     point = p80 - rp80
     print(f"[{label}] p80 差距(vs 隨機) 點估計={point:+.3f}pp, "
@@ -197,6 +197,9 @@ def main() -> None:
               f"差距(A-B)={a_p80-b_p80:+.3f}pp")
         if len(a_sub) < 30 or len(b_sub) < 30:
             print("其中一級 n<30，此差距僅供參考，不判定有無區別力。")
+        ab_diffs = block_bootstrap_quantile_diff(a_sub, b_sub, 0.80, np.random.default_rng(SEED + 2)) * 100
+        ab_ci = np.quantile(ab_diffs, [0.025, 0.975])
+        print(f"A-B 逐週區塊 bootstrap 95% CI(B-A) [{ab_ci[0]:+.3f}, {ab_ci[1]:+.3f}]pp")
     else:
         print(f"A 級 n={len(a_sub)} 或 B 級 n={len(b_sub)} <5，樣本不足，無統計意義。")
 

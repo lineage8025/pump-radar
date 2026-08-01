@@ -8,25 +8,13 @@
 
 ## 問題清單
 
-- **Q2 `probe` open**（2026-08-01 解封，原 watching 等 Q1）— **Phase 0.5：現行 `event` 是不是好的波動爆發預警。**
-  比較「`event` 觸發後 24h 振幅」vs「隨機時點 24h 振幅」的分佈。
-  對照組取樣需避開事件叢集，沿用 `docs/DETECTOR_PREREG.md` 已預登記的「同 4h 窗僅計首發」視角。
-  注意：這與「追價期望為負」不衝突——kill-switch 不需要方向，只需要振幅。
-  但**不得**因此改寫偵測器的定位敘述（那是人類的事）。
-  **2026-08-01 run 1 提醒**：Q1 發現 `bbw_pct` 低（壓縮）對應的是「24h 振幅更小」而非更大
-  （見 `research/log/2026-08-01.md`），`event` 的 A 級門檻正是「觸發前壓縮」——執行 Q2 時
-  這個前置條件對振幅可能是負向貢獻，若 `event` 後振幅仍大於隨機時點，貢獻大概率來自
-  `vol_z≥3.0` 放量條件而非壓縮本身，解讀時要把這個拆解寫清楚，不能只看表面比較。
-
-- **Q1'** `probe` open（2026-08-01 新增，承接 Q1 最強反駁）— **Phase 0 結果的 block bootstrap
-  穩健性覆核。** `research/log/2026-08-01.md` 的最強反駁指出：逐樣本 bootstrap 可能因跨標的
-  同期相關（宏觀 regime 齊漲跌）系統性低估 CI 寬度，5450 筆「獨立樣本」的有效自由度可能遠
-  小於表面值。用同一份既有結果（`research/experiments/2026-08-01_phase0_bbw_amplitude_samples.tsv`）
-  改用按週或按標的分塊的 block bootstrap 重估最低桶 vs 最高桶 24h p80 差距的 CI，
-  若下界仍 >0 → Q1 結論穩健，補記 ledger；若下界 ≤0 → Q1 結論需降級為「未證實」，
-  同樣補記 ledger 並回頭更新 `research/log/2026-08-01.md` 的狀態註記（append 方式，不得
-  刪改原文）。**這不是「換分桶/換T重跑」，是同一分析的穩健性覆核，不受 frontier 兩階段
-  閘門限制**——沿用同一份凍結網格與同一批樣本，只改重抽方法。
+- **Q2' `probe` open**（2026-08-01 run2 新增，承接 Q2 最強反駁第 1 點）— **bbw_pct 分層
+  配對版 Q2。** run2 發現「event vs 隨機時點」整體比較未控制事件當下的 `bbw_pct` 分佈
+  （B 級事件的 `bbw_pct` 底色本來就偏高，依 Q1 這本就該讓振幅偏大；A 級要求 `bbw_pct<=0.25`
+  底色偏低）。下次應把每筆 event 依其觸發當下 `bbw_pct` 值配對到**同一分桶**的隨機時點
+  子集（而非整個 6 桶混合的 Q1 母體）重新比較 24h 振幅，才能把 `vol_z`/突破條件的獨立
+  貢獻與 `bbw_pct` 底色分開。詳見 `research/log/2026-08-01.md` Run 2 最強反駁第 1 點。
+  **這不是新方向，是 Q2 同一問題的更乾淨版本**，不受 frontier 兩階段閘門限制。
 
 - **Q3 `audit` closed（2026-08-01）** — 樣本內基準可重算性：**完全重算一致，無差異**。
   見「已結案」段。
@@ -73,3 +61,16 @@
   與 `docs/DETECTOR_PREREG.md` 引用的原 4 標的基準（n=102/107 事件）與全 10 標的分級分佈表
   （n=235）**全部數字完全相符，無差異**。詳見
   `research/experiments/2026-08-01_q3_audit_insample.py`。
+- **Q1'**（closed 2026-08-01 run2）— Phase 0 結果的 block bootstrap 穩健性覆核：逐 ISO 週
+  區塊重抽後，24h p80 最低桶 vs 最高桶差距 CI 由 [+2.138,+3.464]pp 放寬為
+  **[+1.457,+4.112]pp，仍不含 0**。Q1「有區別力」結論穩健，但精確度下降，之後引用
+  Q1 CI 時改用本次較寬版本。詳見 `research/log/2026-08-01.md` Run 2、
+  `research/experiments/2026-08-01_q1prime_block_bootstrap.py`。
+- **Q2**（closed 2026-08-01 run2，未驗證）— Phase 0.5：`event`（去重後 n=791）24h 振幅
+  vs 隨機時點（Q1 母體 n=5450）p80 差距 +0.191pp，CI [−0.705,+1.128]pp **含 0**——
+  `docs/RND_BACKLOG.md` 的「顯著大於隨機時點→驗證為波動爆發預警」驗收條件**未達成**。
+  A 級（n=263）單獨看甚至略負（CI [−1.873,+0.007]pp）；A vs B 差距顯著（CI [+0.621,+2.934]pp
+  不含 0）但疑似主要是 `bbw_pct` 分佈差異的機械性重述，非 `vol_z` 條件本身的獨立貢獻。
+  **不是「event 完全沒用」的證偽，是本次比較設計無法乾淨拆解 event 的獨立貢獻**——
+  承接題見上方 Q2'。詳見 `research/log/2026-08-01.md` Run 2、
+  `research/experiments/2026-08-01_q2_phase05_event_kill_switch.py`。
