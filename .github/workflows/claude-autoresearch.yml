@@ -19,6 +19,15 @@ on:
         description: "本次運行聚焦的問題（如 Q1；可留空，留空則照 program.md 優先序自選）"
         required: false
         type: string
+  # 夜間班：台北 02:05 / 03:35 / 05:05 / 06:35（cron 是 UTC，台北 = UTC+8）。
+  # 間隔 90 分鐘＝job timeout 上限，避免前一輪還沒跑完就撞上 concurrency 佇列被頂掉。
+  # 分鐘刻意錯開整點：GitHub 排程在整點負載高，常延遲數十分鐘甚至被丟棄。
+  # 排程事件沒有 inputs.focus（空值），agent 會照 program.md 優先序自選題目。
+  schedule:
+    - cron: "5 18 * * *"    # 台北 02:05
+    - cron: "35 19 * * *"   # 台北 03:35
+    - cron: "5 21 * * *"    # 台北 05:05
+    - cron: "35 22 * * *"   # 台北 06:35
 
 concurrency:
   group: autoresearch
@@ -28,8 +37,11 @@ jobs:
   research:
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    # 公開 repo 防路人燒額度／注入 focus，比照 crypto-pulse 的觸發者閘
-    if: contains(fromJSON('["lineage8025"]'), github.actor)
+    # 公開 repo 防路人燒額度／注入 focus，比照 crypto-pulse 的觸發者閘。
+    # ⚠ schedule 事件的 github.actor 不保證是 repo owner（GitHub 取「最後改動 workflow 的人」，
+    # 且該身分會隨日後誰動這個檔而變），漏了這個 or 條件排程會靜默不執行——
+    # 排程事件沒有外部輸入可注入，本來就沒有防路人的必要。
+    if: github.event_name == 'schedule' || contains(fromJSON('["lineage8025"]'), github.actor)
     permissions:
       contents: write
       issues: write
