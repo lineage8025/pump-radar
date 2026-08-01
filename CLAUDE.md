@@ -30,6 +30,14 @@
   score_signals 共用不得分岔；p25~p75 覆蓋率校準檢查已預登記（DETECTOR_PREREG）。
   種子 `data/insample_scored.tsv` 是樣本內 235 筆的計分明細，動它=動基準，別碰。
 
+## 自主研究迴圈（autoresearch，2026-08-01 起）
+- `.github/workflows/claude-autoresearch.yml`，**僅手動 `workflow_dispatch`**（可帶 `focus` 指定聚焦；不排程，比照 crypto-pulse）。設計借自 karpathy/autoresearch 的 program.md 模式。
+- **與 crypto-pulse 版的關鍵差異**：forward journal 在 NAS、日報只推 Discord 不留存，**CI 拿不到 forward 證據**，所以主業不是覆盤 forward，而是**執行 `docs/RND_BACKLOG.md` 的離線探針**——資料由 `research/fetch_klines.py` 從 data.binance.vision 抓（**不用 ccxt**：美國 runner 打 api.binance.com 會 451），全程無 API key。
+- 協定 `research/program.md`（對 agent 唯讀）、積壓清單 `research/backlog.md`（agent 唯一可直接編輯的協定檔）、人格 `.claude/agents/researcher.md`、帳本 `research/LEDGER.tsv`（append-only）。
+- **Phase 0 凍結網格**寫死在 program.md §4（六分桶 × T=1/4/12/24h × p50/p80/p95），**先於結果**登記，防事後挑分桶；分析窗口與標的登記在 `research/backlog.md` 的 Q1。
+- **機器強制**：workflow guard step 檢查 agent push 的路徑白名單（僅 `research/log/`、`research/experiments/`、`LEDGER.tsv`、`backlog.md` 四處）與 LEDGER byte-prefix append-only，越界自動 revert＋Discord 告警＋job fail；另有 failure 通知防無聲跳過。`scripts/`、`data/`、`docs/`、預登記文件對 agent 一律唯讀。
+- `research/` **不在 Dockerfile 的 COPY 清單**（只 COPY `scripts/ data/`），永不進容器；`scripts/` 反向 import `research/` 一律禁止。
+
 ## 部署（Synology NAS，同 crypto-pulse 模式）
 - Portainer git-stack 指向本 repo `main`；push 後手動 Pull and redeploy。
 - 雷（實踩過）：redeploy 帶 `pullImage=false`（本地 build image）；env 是**整組替換**，先 GET 原 Env 帶回再加新值；urllib 發 Discord webhook 必帶 `User-Agent`（Cloudflare 擋預設 UA 回 403）。
