@@ -2,3 +2,4 @@ date	run	questions	lane	status	summary
 2026-08-01	1	Q1,Q3	probe,audit	supports	Phase0六桶24h振幅單調遞增,最低vs最高桶p80差距CI[+2.14,+3.46]pp不含0,方向為持續性非反轉;Q3樣本內基準235筆重算完全相符
 2026-08-01	2	Q1',Q2	probe	inconclusive	Q1週區塊bootstrap CI轉[+1.46,+4.11]pp仍不含0,結論穩健但精度降;Q2 event vs隨機p80差距CI含0,未驗證波動預警,A/B級顯著差距疑似bbw_pct confound
 2026-08-01	3	Q2'	probe	weakens	bbw_pct分層配對Q2:控制桶別後event在n>=30四桶皆無顯著差異,合併CI[-0.660,+0.647]pp含0;A級轉負CI仍含0;極端壓縮桶n=20/22不足,遺留Q2''
+2026-08-01	4	Q1''	probe,tooling	supports	Q1大小市值分層(BTC/ETH vs 其餘8標的)獨立驗證24h p80最低桶vs最高桶差距CI[+1.485,+4.150]/[+1.419,+4.349]pp皆不含0,效應量與全體相近,排除流動性混淆但未排除宏觀regime混淆;另開PR修fetch_klines.py三輪繞過的ms/us單位判斷bug
