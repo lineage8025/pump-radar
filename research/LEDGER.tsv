@@ -4,3 +4,4 @@ date	run	questions	lane	status	summary
 2026-08-01	3	Q2'	probe	weakens	bbw_pct分層配對Q2:控制桶別後event在n>=30四桶皆無顯著差異,合併CI[-0.660,+0.647]pp含0;A級轉負CI仍含0;極端壓縮桶n=20/22不足,遺留Q2''
 2026-08-01	4	Q1''	probe,tooling	supports	Q1大小市值分層(BTC/ETH vs 其餘8標的)獨立驗證24h p80最低桶vs最高桶差距CI[+1.485,+4.150]/[+1.419,+4.349]pp皆不含0,效應量與全體相近,排除流動性混淆但未排除宏觀regime混淆;另開PR修fetch_klines.py三輪繞過的ms/us單位判斷bug
 2026-08-02	5	Q2''	probe	weakens	延長窗口2023-01~2026-06全網格重跑:極端壓縮兩桶event n=42/51過門檻但24h p80差距CI仍含0,六桶合併+0.286pp CI[-0.185,+0.754]含0;時期分層P1/P2 Q1效應+3.671/+2.760pp CI皆不含0削弱regime混淆反駁;原窗口完全重現run1/run3
+2026-08-02	6	Q1'''	probe	supports	YZ/GK交叉驗證Q1主效應(ORIG窗口24h最低vs最高桶p80差距):GK+2.155pp CI[+1.473,+2.984],YZ+2.171pp CI[+1.510,+2.957],皆不含0且與Parkinson range主結果+2.760pp方向一致,三方一致判supports,削弱漂移偏誤為主要驅動力疑慮但未完全排除

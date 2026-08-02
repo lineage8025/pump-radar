@@ -30,7 +30,10 @@
 - **Q3 `audit` closed（2026-08-01）** — 樣本內基準可重算性：**完全重算一致，無差異**。
   見「已結案」段。
 
-- **Q4 `tooling` open** — **forward 證據盲點。** 本迴圈在 CI 內看不到任何 forward 數據
+- **Q1''' `probe` closed（2026-08-02 run6）** — YZ/GK 交叉驗證 Q1 主效應。
+  結論見「已結案」段。
+
+- **Q4 `tooling` open（連續六輪被 probe 排擠，累積優先度最高的非 probe 項）** — **forward 證據盲點。** 本迴圈在 CI 內看不到任何 forward 數據
   （journal 在 NAS、日報只推 Discord 不留存）。提案：讓 `daily_pulse_dispatch.py` 的 payload
   額外存成一個 issue（或讓 `claude-daily-pulse.yml` 開 issue 存檔），使迴圈能覆盤 forward 進度。
   **只開 PR 提案，不得自行實作上線**——那條路徑是 production。
@@ -71,6 +74,17 @@
 
 ## 已結案
 
+- **Q1'''**（closed 2026-08-02 run6）— YZ／GK 交叉驗證 Q1 主效應（`program.md` §4.1 放行）：
+  ORIG 主窗口（2025-01-01~2026-06-30，n=5450，同 run1/run5 樣本點）24h 最低桶 vs 最高桶
+  p80 差距，Garman-Klass **+2.155pp CI [+1.473,+2.984]**、Yang-Zhang **+2.171pp
+  CI [+1.510,+2.957]**，皆不含 0，且與凍結網格主結果（Parkinson range +2.760pp
+  CI [+1.563,+4.060]）方向一致，1h/4h/12h 三個 T 也全部一致不含 0 → 依 §4.1 約束③
+  判定 **`supports`**。GK（未做漂移修正）與 YZ（有做漂移修正）24h 點估計只差
+  0.0169pp，**削弱「Q1 效應主要由單邊趨勢/漂移偏誤驅動」這個特定疑慮**，但**不能**
+  當作「Q1 是獨家 edge 而非波動聚集重述」的證據（見日誌最強反駁 3，仍是 run5 最強
+  反駁第 2 點的開放問題）。公式已用合成資料驗證正確；GK/YZ 變異數截尾 21800 組
+  中 0 次觸發。詳見 `research/log/2026-08-02.md` Run 6、
+  `research/experiments/2026-08-02_q1triple_yz_gk_crossval.py`。
 - **Q1**（closed 2026-08-01）— Phase 0：`bbw_pct` 對後續振幅有無區別力。
   結論：**有區別力**（六分桶在 4 個 T 上單調遞增，24h 檔最低桶 vs 最高桶 p80 差距
   bootstrap 95% CI [+2.14,+3.46]pp，下界 >0），未觸發 kill criteria。方向與「壓縮後爆發」
