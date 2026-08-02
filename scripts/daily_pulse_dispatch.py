@@ -12,6 +12,7 @@
 
 import json
 import os
+import urllib.error
 import urllib.request
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -85,6 +86,34 @@ def dispatch(token: str, repo: str, payload: dict) -> int:
                  "User-Agent": "pump-radar-pulse/1.0"},  # Cloudflare/GH 都要 UA
     )
     return urllib.request.urlopen(req, timeout=15).getcode()
+
+
+def archive_issue(token: str, repo: str, payload: dict) -> None:
+    """把當日 payload 存成 issue，讓 autoresearch 迴圈在 CI 裡也能看到 forward 證據
+    （journal 只在 NAS、日報只推 Discord 不留存，CI 目前完全看不到 forward 數據）。
+    純附加的觀測性存檔，失敗不得影響已完成的 Discord dispatch 與 marker/state 落盤。"""
+    headers = {"Authorization": f"Bearer {token}",
+               "Accept": "application/vnd.github+json",
+               "User-Agent": "pump-radar-pulse/1.0"}
+    url = f"https://api.github.com/repos/{repo}/issues"
+    body = {"title": f"Daily Pulse Archive: {payload['date_taipei']}",
+            "body": "```json\n" + json.dumps(payload, ensure_ascii=False, indent=2) + "\n```",
+            "labels": ["daily-pulse-archive"]}
+    try:
+        req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers)
+        urllib.request.urlopen(req, timeout=15)
+    except urllib.error.HTTPError as e:
+        if e.code != 422:  # 非「label 不存在」類錯誤，不重試
+            print(f"[pulse] archive_issue failed: HTTP {e.code}", flush=True)
+            return
+        body.pop("labels")  # label 不存在會 422，去掉 labels 重試一次
+        try:
+            req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers)
+            urllib.request.urlopen(req, timeout=15)
+        except Exception as e2:
+            print(f"[pulse] archive_issue retry (no label) failed: {e2}", flush=True)
+    except Exception as e:
+        print(f"[pulse] archive_issue failed: {e}", flush=True)
 
 
 def main() -> None:
@@ -163,6 +192,7 @@ def main() -> None:
         MARKER.touch()
         state["reported"] += [s["ts"] + s["pair"] for s in newly_scored]
         STATE.write_text(json.dumps(state))
+        archive_issue(token, repo, payload)
         print(f"[pulse {hb}] dispatched: {len(new_signals)} new, "
               f"{len(newly_scored)} scored", flush=True)
     else:
