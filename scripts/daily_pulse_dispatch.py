@@ -88,32 +88,55 @@ def dispatch(token: str, repo: str, payload: dict) -> int:
     return urllib.request.urlopen(req, timeout=15).getcode()
 
 
+ARCHIVE_LABEL = "daily-pulse-archive"
+
+
+def _gh_json(token: str, url: str, body: dict, method: str = "POST") -> dict:
+    """對 GitHub API 發 JSON 請求並回傳解析後的 response；例外由呼叫端接。
+    header 與 dispatch() 一致（含 UA——Cloudflare/GH 都要）。"""
+    req = urllib.request.Request(
+        url, data=json.dumps(body).encode(), method=method,
+        headers={"Authorization": f"Bearer {token}",
+                 "Accept": "application/vnd.github+json",
+                 "User-Agent": "pump-radar-pulse/1.0"},
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return json.loads(resp.read() or b"{}")
+
+
 def archive_issue(token: str, repo: str, payload: dict) -> None:
     """把當日 payload 存成 issue，讓 autoresearch 迴圈在 CI 裡也能看到 forward 證據
     （journal 只在 NAS、日報只推 Discord 不留存，CI 目前完全看不到 forward 數據）。
-    純附加的觀測性存檔，失敗不得影響已完成的 Discord dispatch 與 marker/state 落盤。"""
-    headers = {"Authorization": f"Bearer {token}",
-               "Accept": "application/vnd.github+json",
-               "User-Agent": "pump-radar-pulse/1.0"}
+
+    **建立後立刻關閉**：存檔資料不需要 open 狀態，而一天一則、一年 365 則全部 open
+    會把 `Research:` issue 淹掉、讓 issues 分頁失去可用性。迴圈讀取時帶
+    `--state closed --label daily-pulse-archive` 即可，不影響可及性。
+
+    純附加的觀測性存檔，任何失敗都不得影響已完成的 Discord dispatch 與 marker/state 落盤，
+    所以全程吞例外只印 log。若 token 缺 issues:write 會是 403，日報照常、只是沒有存檔。"""
     url = f"https://api.github.com/repos/{repo}/issues"
     body = {"title": f"Daily Pulse Archive: {payload['date_taipei']}",
             "body": "```json\n" + json.dumps(payload, ensure_ascii=False, indent=2) + "\n```",
-            "labels": ["daily-pulse-archive"]}
+            "labels": [ARCHIVE_LABEL]}
     try:
-        req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers)
-        urllib.request.urlopen(req, timeout=15)
-    except urllib.error.HTTPError as e:
-        if e.code != 422:  # 非「label 不存在」類錯誤，不重試
-            print(f"[pulse] archive_issue failed: HTTP {e.code}", flush=True)
-            return
-        body.pop("labels")  # label 不存在會 422，去掉 labels 重試一次
         try:
-            req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers)
-            urllib.request.urlopen(req, timeout=15)
-        except Exception as e2:
-            print(f"[pulse] archive_issue retry (no label) failed: {e2}", flush=True)
+            issue = _gh_json(token, url, body)
+        except urllib.error.HTTPError as e:
+            if e.code != 422:  # 422＝label 不存在之類的驗證錯誤；其餘不重試
+                raise
+            # 去掉 label 重試：能存下來比帶標籤重要，但這樣就只能靠標題前綴找到它
+            body.pop("labels")
+            issue = _gh_json(token, url, body)
     except Exception as e:
-        print(f"[pulse] archive_issue failed: {e}", flush=True)
+        print(f"[pulse] archive_issue create failed: {e}", flush=True)
+        return
+    num = issue.get("number")
+    if not num:
+        return
+    try:
+        _gh_json(token, f"{url}/{num}", {"state": "closed"}, method="PATCH")
+    except Exception as e:  # 建立成功但沒關掉：資料在，只是會佔著 open
+        print(f"[pulse] archive_issue #{num} close failed: {e}", flush=True)
 
 
 def main() -> None:
