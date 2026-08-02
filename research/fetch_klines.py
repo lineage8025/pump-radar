@@ -115,13 +115,13 @@ def main() -> int:
         for m in mlist:
             got = fetch_month(symbol, m, args.interval)
             if got is not None and len(got):
-                parts.append(got)
+                parts.append(to_candles(got))
         if not parts:
             print(f"[warn] {pair} 一個月都沒抓到，跳過", file=sys.stderr)
             rc = 1
             continue
 
-        candles = to_candles(pd.concat(parts, ignore_index=True))
+        candles = pd.concat(parts, ignore_index=True)
         # 月度檔理論上不重疊，但 Binance 偶有邊界重複；去重後嚴格升冪，供 detector 的 rolling 用
         candles = (candles.drop_duplicates(subset="date")
                           .sort_values("date")
