@@ -33,10 +33,16 @@
 - **Q1''' `probe` closed（2026-08-02 run6）** — YZ/GK 交叉驗證 Q1 主效應。
   結論見「已結案」段。
 
-- **Q4 `tooling` open（連續六輪被 probe 排擠，累積優先度最高的非 probe 項）** — **forward 證據盲點。** 本迴圈在 CI 內看不到任何 forward 數據
-  （journal 在 NAS、日報只推 Discord 不留存）。提案：讓 `daily_pulse_dispatch.py` 的 payload
-  額外存成一個 issue（或讓 `claude-daily-pulse.yml` 開 issue 存檔），使迴圈能覆盤 forward 進度。
-  **只開 PR 提案，不得自行實作上線**——那條路徑是 production。
+- **Q4 `tooling` open（2026-08-02 run7 已開 PR #8，待人類 review，未結案）** — **forward 證據盲點。**
+  本迴圈在 CI 內看不到任何 forward 數據（journal 在 NAS、日報只推 Discord 不留存）。
+  run7 交出提案：`https://github.com/lineage8025/pump-radar/pull/8`（分支
+  `research/q4-daily-pulse-archive-issue`）——`daily_pulse_dispatch.py` 在既有 Discord
+  dispatch 成功後，額外呼叫 GitHub Issues API 把當日 payload 存成一個 issue。純加法，
+  不影響既有流程；未實跑驗證，**token scope（是否涵蓋 issues:write）與
+  `daily-pulse-archive` label 建立都待人類確認**，PR 說明已列清楚。**只開 PR 提案，
+  不得自行實作上線**——維持 `open` 直到人類 review／合併／觀察穩定運行後才能結案；
+  即使合併，也只解決「資料可及性」，還需要下一輪去讀取累積的 issue 才算真正覆盤 forward
+  （見 `research/log/2026-08-02.md` Run 7 最強反駁 1）。
 
 - **Q5 `lit` watching** — 承接 `docs/RESEARCH_BBW_VOLATILITY.md` §6 的缺口：
   加密貨幣專屬、同儕審查、直接檢定「BBW squeeze 對後續振幅有無區別力」的一手論文**查不到**。
