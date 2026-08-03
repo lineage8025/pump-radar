@@ -3,22 +3,32 @@
 執行 docs/RND_BACKLOG.md 方向一 Phase 1。策略本體移植自 classic-grid `src/grid.ts`
 （等同 docs/RESEARCH_GRID_MECHANICS.md 第一節的 77 行三函式），**不加任何原策略沒有的邏輯**。
 
-核心結構性簡化（讓 30 組撮合 × ~12,800 錨點可算）
+核心結構性簡化（讓 60 組撮合 × 12,470 錨點可算）
 ------------------------------------------------
-等差網格 + 「買成交於 i → 於 i+1 掛賣 / 賣成交於 i → 於 i-1 掛買」+ 一格一單，
-使得任一時刻**恰好只有一個空檔位**，整個掛單狀態塌縮成單一整數。因此：
+一格一單 + 「買成交於 i → 於 i+1 掛賣」使任一時刻**恰有一個空檔位 e**，
+買單全在 e 下方、賣單全在 e 上方。整個掛單狀態塌縮成單一整數 e，且
 
-    pos = C - idx        （idx = 當前價格所在檔位；C 由首次成交在哪一側決定）
+    pos = e0 - e        （e0 = 錨點的空檔位 = n//2）
 
-部位是當前價格檔位的**純函數**，不需逐根跑狀態機。再利用等差級數區間和的封閉解
+**注意 e 不是 floor(price)**：買在 levels[e] 之後，下一次成交要等跌破
+levels[e-1] 或漲過 levels[e+1]——死區有【兩格】寬，這是真實的遲滯。
+早期版本誤用 floor(price) 當狀態，每根憑空生出約一次來回（成交筆數 3x、
+PnL 4.3x），由對拍暴力版揭露。
+
+e 的每根更新是 clamp(e, L, U)；**clamp 的複合仍是 clamp**，構成 monoid，
+故可用 prefix scan 在 O(n log n) 內平行求出整條 e 序列，不必逐根跑狀態機。
+配合等差級數區間和的封閉解
 
     sum(levels[p..q]) = (q-p+1) * (levels[p] + levels[q]) / 2
 
-每根 K 棒的現金流變成 O(1) 算術，整段 episode 純 numpy 向量化。
+每根的現金流亦為 O(1) 算術，整段 episode 純 numpy 向量化。
 
 第二個簡化：**槓桿不影響成交序列**。成交序列只由價格路徑與檔位幾何決定，
-槓桿只縮放部位大小與強平門檻。故實跑撮合 = W(5) × 格數(2) × 策略(3) = 30 組，
-槓桿(5) × T(3) × 維持保證金(2) × 費率(3) 全部在後處理由同一條庫存路徑解析求值。
+槓桿只縮放部位大小與強平門檻。故實跑撮合 = W(5) × 格數(2) × 策略(3) × 路徑序(2)
+= 60 組/錨點，槓桿(5) × T(3) × 維持保證金(2) × 費率(3) 全部在後處理解析求值。
+
+正確性：與 `scratchpad/brute.py`（顯式維護掛單集合、逐點推進的暴力版）
+對拍 120 組 × 2000 根**逐根全序列** pos/cash/fee_px，最大誤差 2.2e-11。
 
 用法
 ----
@@ -86,13 +96,59 @@ def _range_sum(p, q, lower: float, spacing: float):
     return np.where(q < p, 0.0, s)
 
 
-def _idx_floor(price, lower: float, spacing: float, n: int):
-    """價格所在檔位（最高的 levels[i] <= price），夾在 [-1, n]。
+# 檔位換算的容差（單位＝檔位）。價格正好落在檔位上時，(p-lower)/spacing 可能算成
+# 20.000000000000004，ceil 就跳到 21 而漏掉那筆成交。GRID_SIM_PREREG §三 明定
+# 「碰價即成交」，故用 eps 讓浮點誤差內的相等一律視為觸及。
+_IDX_EPS = 1e-9
 
-    -1 代表跌破 levels[0]（下方買單已全數成交）；n 代表站上 levels[n]。
-    """
-    raw = np.floor((np.asarray(price) - lower) / spacing)
-    return np.clip(raw, -1, n).astype(np.int64)
+
+def _idx_floor(price, lower: float, spacing: float, n: int):
+    """最高的 levels[i] <= price，夾在 [0, n]。"""
+    raw = np.floor((np.asarray(price) - lower) / spacing + _IDX_EPS)
+    return np.clip(raw, 0, n).astype(np.int64)
+
+
+def _idx_ceil(price, lower: float, spacing: float, n: int):
+    """最低的 levels[i] >= price，夾在 [0, n]。"""
+    raw = np.ceil((np.asarray(price) - lower) / spacing - _IDX_EPS)
+    return np.clip(raw, 0, n).astype(np.int64)
+
+
+# ── 狀態變數是「最後被穿越的檔位」e，不是 floor(price) ──────────────────
+#
+# 一格一單 + 「買成交於 i → 於 i+1 掛賣」使得任一時刻恰有一個空檔位 e，
+# 買單在 e 下方、賣單在 e 上方。因此下一次成交需要
+#     跌破 levels[e-1]（買）或漲過 levels[e+1]（賣）
+# ——死區有【兩格】寬，這是真實的遲滯。用 floor(price) 當狀態會漏掉這格，
+# 每根憑空生出約一次來回（實測成交筆數 3x、PnL 4.3x，且自第 0 根即分岔）。
+#
+# e 的更新是 clamp(e, L, U) 形式；clamp 的複合仍是 clamp，構成 monoid：
+#     c(c(x;L1,U1);L2,U2) = c(x; c(L1;L2,U2), c(U1;L2,U2))
+# 故可用 prefix scan 在 O(n log n) 內平行求出整條 e 序列。
+BIG = np.int64(1 << 40)
+
+
+def _clamp(x, lo, hi):
+    return np.minimum(np.maximum(x, lo), hi)
+
+
+def _compose(L1, U1, L2, U2):
+    """先套用 (L1,U1) 再套用 (L2,U2) 的等效 clamp 參數。"""
+    return _clamp(L1, L2, U2), _clamp(U1, L2, U2)
+
+
+def _scan_clamp(L: np.ndarray, U: np.ndarray, e0: int) -> np.ndarray:
+    """對 clamp monoid 做 inclusive prefix scan，回傳每根結束時的 e。"""
+    L, U = L.copy(), U.copy()
+    n = len(L)
+    d = 1
+    while d < n:
+        L2, U2 = L[d:], U[d:]
+        L1, U1 = L[:-d], U[:-d]
+        nL, nU = _compose(L1, U1, L2, U2)      # 前段先、後段後
+        L[d:], U[d:] = nL, nU
+        d *= 2
+    return _clamp(np.int64(e0), L, U)
 
 
 # 成交檔位範圍（買賣不對稱，差一格就是網格賺不賺錢的分野）
@@ -121,54 +177,46 @@ def simulate_episode(
     levels = build_levels(mid, half_band_pct, n)
     lower, upper = float(levels[0]), float(levels[-1])
     spacing = float(levels[1] - levels[0])
-    j_lo, j_hi = seed_boundaries(mid, levels, spacing)
-
-    # ── 首次成交在哪一側 → 決定常數 C（pos = C - idx）──
-    hit_dn = np.nonzero(_idx_floor(l, lower, spacing, n) <= j_lo)[0]
-    hit_up = np.nonzero(_idx_floor(h, lower, spacing, n) >= j_hi)[0]
-    first_dn = int(hit_dn[0]) if hit_dn.size else len(o) + 1
-    first_up = int(hit_up[0]) if hit_up.size else len(o) + 1
-    start = min(first_dn, first_up)
     nb = len(o)
-    if start >= nb:                              # 整段都在死區，無任何成交
-        z = np.zeros(nb)
-        return {"pos": z, "cash": z, "fee_px": z, "mark": c,
-                "breach_i": -1, "spacing": spacing, "levels": levels}
-    # 同一根同時觸及兩側時，依 path_order 決定誰先
-    down_first = first_dn < first_up or (
-        first_dn == first_up and _leg_down_first(o[start], c[start], path_order)
-    )
-    C = (j_lo + 1) if down_first else (j_hi - 1)
 
-    # ── 逐根四點檔位（向量化）──
-    i_o = _idx_floor(o, lower, spacing, n)
-    i_c = _idx_floor(c, lower, spacing, n)
-    i_h = _idx_floor(h, lower, spacing, n)
-    i_l = _idx_floor(l, lower, spacing, n)
+    # mid 恆等於 levels[n//2]（levels = linspace(mid-W, mid+W, n+1)，n 為偶數），
+    # 故 skipBand 恰好跳過正中一檔：買單 0..n//2-1、賣單 n//2+1..n，空檔位 = n//2。
+    # 這與 classic-grid test/grid.test.ts 的「80 格 → 買賣各 40」一致。
+    e0 = n // 2
 
-    # 單調路徑：close >= open 走 起點→l→h→c，否則 起點→h→l→c
-    #
-    # 每根的「起點」用【前一根的收盤檔位】而非本根開盤，讓整段路徑嚴格連續：
-    # 第 0 根的起點是錨點本身（C），否則錨點到首根開盤之間的價格移動會被漏記。
-    # 真實 1m 資料 open[i]==close[i-1] 幾乎總成立，但缺口一旦存在就會漏掉成交。
+    # 路徑點的檔位：下行看 ceil（跌到 p 時被穿越的最低檔位是 ceil(p)），
+    # 上行看 floor（漲到 p 時被穿越的最高檔位是 floor(p)）。
+    a_dn = _idx_ceil(l, lower, spacing, n)       # 探低時 e 的下界
+    b_up = _idx_floor(h, lower, spacing, n)      # 探高時 e 的上界
+    c_ce = _idx_ceil(c, lower, spacing, n)
+    c_fl = _idx_floor(c, lower, spacing, n)
+
+    # 每根的等效 clamp。單調路徑：收漲走 起點→low→high→close（末腿向下），
+    # 收跌走 起點→high→low→close（末腿向上）。起點即前一根的 e，路徑天然連續。
     dn_first = _leg_down_first_arr(o, c, path_order)
-    legs = np.where(dn_first[:, None], np.stack([i_l, i_h], 1),
-                    np.stack([i_h, i_l], 1))
-    i_start = np.empty(nb, dtype=np.int64)
-    i_start[0] = C
-    i_start[1:] = i_c[:-1]
-    seq = np.concatenate([i_start[:, None], legs, i_c[:, None]], axis=1)  # (nb, 4)
+    negB, posB = -BIG, BIG
+    L1 = np.where(dn_first, negB, b_up)          # 第一腿
+    U1 = np.where(dn_first, a_dn, posB)
+    L2 = np.where(dn_first, b_up, negB)          # 第二腿
+    U2 = np.where(dn_first, posB, a_dn)
+    L3 = np.where(dn_first, negB, c_fl)          # 末腿（收盤）
+    U3 = np.where(dn_first, c_ce, posB)
+    Lb, Ub = _compose(L1, U1, L2, U2)
+    Lb, Ub = _compose(Lb, Ub, L3, U3)
 
-    # 死區內（start 之前）不成交：把序列釘在起始檔位
-    seq = seq.copy()
-    seq[:start, :] = C
-    if start < nb:
-        seq[start, 0] = C                        # 死區結束的那根，起點仍是錨點
+    e_end = _scan_clamp(Lb, Ub, e0)              # 每根結束時的空檔位
+    e_prev = np.empty(nb, dtype=np.int64)
+    e_prev[0] = e0
+    e_prev[1:] = e_end[:-1]
+
+    # 由 e_prev 重建逐腿端點，算現金流與成交價和
+    s1 = _clamp(e_prev, L1, U1)
+    s2 = _clamp(s1, L2, U2)
+    s3 = _clamp(s2, L3, U3)
 
     d_cash = np.zeros(nb)
     d_feepx = np.zeros(nb)
-    for k in range(3):                           # 三段單調腿
-        a, b = seq[:, k], seq[:, k + 1]
+    for a, b in ((e_prev, s1), (s1, s2), (s2, s3)):
         dn = b < a                               # 下行 → 買 levels[b..a-1]
         up = b > a                               # 上行 → 賣 levels[a+1..b]
         s_dn = _range_sum(b, a - 1, lower, spacing)
@@ -176,7 +224,8 @@ def simulate_episode(
         d_cash += np.where(dn, -s_dn, 0.0) + np.where(up, s_up, 0.0)
         d_feepx += np.where(dn, s_dn, 0.0) + np.where(up, s_up, 0.0)
 
-    idx_end = seq[:, 3]
+    idx_end = e_end
+    C = e0
     pos = (C - idx_end).astype(np.float64)
     cash = np.cumsum(d_cash)
     fee_px = np.cumsum(d_feepx)
@@ -195,7 +244,7 @@ def simulate_episode(
     elif bi >= 0 and policy == "recover":
         # 只減不加：出界後不再重開開倉腿，部位只能單調趨近 0
         cash, pos, fee_px = _apply_recover(
-            cash, pos, fee_px, bi, seq, lower, spacing)
+            cash, pos, fee_px, bi, e_end, lower, spacing)
 
     res = {"pos": pos, "cash": cash, "fee_px": fee_px, "mark": c,
            "breach_i": bi, "spacing": spacing, "levels": levels}
@@ -216,7 +265,7 @@ def _leg_down_first_arr(o: np.ndarray, c: np.ndarray, path_order: str) -> np.nda
     return base if path_order == "auto" else ~base
 
 
-def _apply_recover(cash, pos, fee_px, bi, seq, lower, spacing):
+def _apply_recover(cash, pos, fee_px, bi, e_end, lower, spacing):
     """recover：出界後撤開倉腿，只保留 reduce-only 階梯（只減不加、不止損）。
 
     操作化定義（GRID_SIM_PREREG §三「撤掉開倉腿，只保留 reduce-only 階梯」）：
@@ -236,7 +285,7 @@ def _apply_recover(cash, pos, fee_px, bi, seq, lower, spacing):
     else:
         allowed = np.maximum.accumulate(np.minimum(raw, 0.0))
     d = np.diff(np.concatenate([[pos[bi]], allowed]))     # 每根實際減倉量
-    px = lower + spacing * (seq[bi:, 3] + 0.5)            # 減倉成交價近似為該檔位
+    px = lower + spacing * e_end[bi:]                      # 減倉成交價取當時所在檔位
     cash[bi:] = cash[bi] + np.cumsum(-d * px)
     fee_px[bi:] = fee_px[bi] + np.cumsum(np.abs(d) * px)
     pos[bi:] = allowed
