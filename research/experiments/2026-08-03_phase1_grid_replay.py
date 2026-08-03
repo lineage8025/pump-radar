@@ -526,6 +526,9 @@ def main() -> int:
     ap.add_argument("--pairs", default=None, help="預設用資料目錄下全部")
     ap.add_argument("--limit-anchors", type=int, default=0, help="0=不限，>0 供計時用")
     ap.add_argument("--procs", type=int, default=10, help="平行行程數（切分單位=標的）")
+    ap.add_argument("--main-path", default="auto", choices=PATH_ORDERS,
+                    help="哪個 intrabar 路徑序當主情境（另一序只存彙總）。"
+                         "預登記把兩序都列為必跑的敏感度檢查，未指定何者為主，故可切換。")
     args = ap.parse_args()
 
     if args.self_test:
@@ -611,12 +614,12 @@ def _run_one_pair(job: tuple) -> tuple:
     切分單位是標的：各標的的錨點序列彼此獨立，合併時照 sorted(files) 的順序
     串接即與單行程結果逐位元相同（已由 --verify-parallel 驗證）。
     """
-    fp_str, limit_anchors = job
+    fp_str, limit_anchors, main_path_sel = job
     fp = Path(fp_str)
     pair = fp.name.split("-1m")[0]
     horizons = [d * BARS_PER_DAY for d in HORIZONS_D]
     max_h = max(horizons)
-    main_mm, main_fee, main_path = MAINT_RATES[0], FEE_RATES[0], "auto"
+    main_mm, main_fee, main_path = MAINT_RATES[0], FEE_RATES[0], main_path_sel
 
     df = pd.read_feather(fp)
     o = df["open"].to_numpy(np.float64)
@@ -696,7 +699,7 @@ def run_full(args) -> int:
 
     t0 = time.time()
     n_ep = 0
-    jobs = [(str(f), args.limit_anchors) for f in files]
+    jobs = [(str(f), args.limit_anchors, args.main_path) for f in files]
     nproc = min(len(jobs), args.procs)
     print(f"[run] {len(jobs)} 個標的，{nproc} 個行程", flush=True)
 
