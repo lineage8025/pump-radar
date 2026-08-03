@@ -443,6 +443,28 @@ def self_test() -> int:
         chk(f"格差收入非負（path={path_}）", r_["pnl_grid"] >= -1e-12,
             f"got {r_['pnl_grid']:.12f}")
 
+    # ⑫ 生產路徑一致性：全量跑用的是 _episode_scalars（searchsorted 化簡版），
+    #    上面各項驗的卻是 evaluate()。兩者若分岔，驗過的就不是產出結果的程式碼。
+    rng = np.random.default_rng(7)
+    bad = n_cmp = 0
+    for _ in range(20):
+        px = 100.0 * np.exp(np.cumsum(rng.normal(
+            rng.choice([-1, 0, 1]) * rng.uniform(0, 3e-4), 6e-4, 3000)))
+        oo, hh, ll, cc = _mk_bars(px)
+        Tn = len(oo)
+        for W_ in (1.5, 4.6, 10.0):
+            for pol_ in POLICIES:
+                ep_ = simulate_episode(oo, hh, ll, cc, 100.0, W_, 40, pol_, "auto")
+                ref = {(mm, fe, lv): evaluate(ep_, 100.0, 40, lv, mm, fe, Tn)
+                       for lv in LEVERAGES for mm in MAINT_RATES for fe in FEE_RATES}
+                for (mm, fe, lv, _T), (net, liq, *_r) in _episode_scalars(
+                        ep_, 100.0, 40, [Tn], LEVERAGES, MAINT_RATES, FEE_RATES):
+                    r = ref[(mm, fe, lv)]
+                    n_cmp += 1
+                    if abs(net - r["net_return"]) > 1e-9 or liq != r["liquidated"]:
+                        bad += 1
+    chk(f"生產路徑一致性（{n_cmp} 組情境）", bad == 0, f"{bad} 組不一致")
+
     print("\n" + ("SELF-TEST ALL PASS" if ok else "SELF-TEST FAILED"))
     return 0 if ok else 1
 
@@ -454,6 +476,7 @@ def main() -> int:
     ap.add_argument("--out-prefix")
     ap.add_argument("--pairs", default=None, help="預設用資料目錄下全部")
     ap.add_argument("--limit-anchors", type=int, default=0, help="0=不限，>0 供計時用")
+    ap.add_argument("--procs", type=int, default=10, help="平行行程數（切分單位=標的）")
     args = ap.parse_args()
 
     if args.self_test:
@@ -533,7 +556,76 @@ def _block_bootstrap_ci(v: np.ndarray, weeks: np.ndarray, n_boot: int = 2000,
     return (float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5)))
 
 
+def _run_one_pair(job: tuple) -> tuple:
+    """單一標的的全部錨點 × 全部格位。回傳可 pickle 的部分結果供父行程合併。
+
+    切分單位是標的：各標的的錨點序列彼此獨立，合併時照 sorted(files) 的順序
+    串接即與單行程結果逐位元相同（已由 --verify-parallel 驗證）。
+    """
+    fp_str, limit_anchors = job
+    fp = Path(fp_str)
+    pair = fp.name.split("-1m")[0]
+    horizons = [d * BARS_PER_DAY for d in HORIZONS_D]
+    max_h = max(horizons)
+    main_mm, main_fee, main_path = MAINT_RATES[0], FEE_RATES[0], "auto"
+
+    df = pd.read_feather(fp)
+    o = df["open"].to_numpy(np.float64)
+    h = df["high"].to_numpy(np.float64)
+    l = df["low"].to_numpy(np.float64)
+    c = df["close"].to_numpy(np.float64)
+    dates = df["date"].to_numpy()
+    nbars = len(c)
+    anchors = np.arange(0, nbars - max_h - 1, ANCHOR_STRIDE)
+    if limit_anchors:
+        anchors = anchors[:limit_anchors]
+
+    samples: dict[tuple, list] = {}
+    sums: dict[tuple, list] = {}
+    agg: dict[tuple, list] = {}
+    a_pair: list[str] = []
+    a_week: list[int] = []
+    n_ep = 0
+
+    for a in anchors:
+        mid = float(c[a])
+        s = slice(a + 1, a + 1 + max_h)
+        oo, hh, ll, cc = o[s], h[s], l[s], c[s]
+        wk = pd.Timestamp(dates[a]).isocalendar()
+        a_pair.append(pair)
+        a_week.append(wk[0] * 100 + wk[1])
+
+        for W in HALF_BANDS:
+            for N in GRID_COUNTS:
+                for pol in POLICIES:
+                    for path in PATH_ORDERS:
+                        is_main_path = path == main_path
+                        ep = simulate_episode(oo, hh, ll, cc, mid, W, N, pol, path)
+                        n_ep += 1
+                        mms = MAINT_RATES if is_main_path else [main_mm]
+                        fes = FEE_RATES if is_main_path else [main_fee]
+                        for (mm, fee, lev, T), vals in _episode_scalars(
+                                ep, mid, N, horizons, LEVERAGES, mms, fes):
+                            key = (W, N, pol, path, lev, T, mm, fee)
+                            net, liq, pfee, pinv, pgrid = vals
+                            if (mm, fee, path) == (main_mm, main_fee, main_path):
+                                samples.setdefault(key, []).append(net)
+                                r = sums.setdefault(key, [0, 0.0, 0.0, 0.0, 0])
+                                r[0] += 1
+                                r[3] += pfee
+                                if pgrid == pgrid:   # 非 NaN（close/recover 不提供拆解）
+                                    r[1] += pgrid; r[2] += pinv; r[4] += 1
+                            else:
+                                r = agg.setdefault(key, [0, 0.0, 0])
+                                r[0] += 1; r[1] += net; r[2] += liq
+
+    return pair, len(anchors), n_ep, samples, sums, agg, a_pair, a_week
+
+
 def run_full(args) -> int:
+    import time
+    from multiprocessing import Pool
+
     data_dir = Path(args.data_dir)
     files = sorted(data_dir.glob("*-1m.feather"))
     if args.pairs:
@@ -543,13 +635,9 @@ def run_full(args) -> int:
         print(f"[err] {data_dir} 下沒有 *-1m.feather", file=sys.stderr)
         return 1
 
-    horizons = [d * BARS_PER_DAY for d in HORIZONS_D]
-    max_h = max(horizons)
-    main_mm, main_fee, main_path = MAINT_RATES[0], FEE_RATES[0], "auto"
-
     # 主情境存逐筆 net（供分位數與 bootstrap）；穩健性情境只累計彙總。
     # pair / iso_week 對所有格位是同一組錨點序列，故只存一份，不隨格位複製
-    # （450 格 × 12,760 錨點若各存 tuple 會吃到 GB 級）。
+    # （450 格 × 12,470 錨點若各存 tuple 會吃到 GB 級）。
     # liquidated 不另存：強平時 net 恆被設為 -1.0，可由 net 精確還原。
     samples: dict[tuple, list] = {}
     sums: dict[tuple, list] = {}
@@ -557,59 +645,32 @@ def run_full(args) -> int:
     anchor_pair: list[str] = []
     anchor_week: list[int] = []
 
-    import time
     t0 = time.time()
     n_ep = 0
+    jobs = [(str(f), args.limit_anchors) for f in files]
+    nproc = min(len(jobs), args.procs)
+    print(f"[run] {len(jobs)} 個標的，{nproc} 個行程", flush=True)
 
-    for fp in files:
-        pair = fp.name.split("-1m")[0]
-        df = pd.read_feather(fp)
-        o = df["open"].to_numpy(np.float64)
-        h = df["high"].to_numpy(np.float64)
-        l = df["low"].to_numpy(np.float64)
-        c = df["close"].to_numpy(np.float64)
-        dates = df["date"].to_numpy()
-        nbars = len(c)
-        anchors = np.arange(0, nbars - max_h - 1, ANCHOR_STRIDE)
-        if args.limit_anchors:
-            anchors = anchors[: args.limit_anchors]
-        print(f"[{pair}] {nbars} 根，{len(anchors)} 個錨點", flush=True)
-
-        for a in anchors:
-            mid = float(c[a])
-            s = slice(a + 1, a + 1 + max_h)
-            oo, hh, ll, cc = o[s], h[s], l[s], c[s]
-            wk = pd.Timestamp(dates[a]).isocalendar()
-            anchor_pair.append(pair)
-            anchor_week.append(wk[0] * 100 + wk[1])
-
-            for W in HALF_BANDS:
-                for N in GRID_COUNTS:
-                    for pol in POLICIES:
-                        for path in PATH_ORDERS:
-                            is_main_path = path == main_path
-                            ep = simulate_episode(oo, hh, ll, cc, mid, W, N, pol, path)
-                            n_ep += 1
-                            mms = MAINT_RATES if is_main_path else [main_mm]
-                            fes = FEE_RATES if is_main_path else [main_fee]
-                            for (mm, fee, lev, T), vals in _episode_scalars(
-                                    ep, mid, N, horizons, LEVERAGES, mms, fes):
-                                key = (W, N, pol, path, lev, T, mm, fee)
-                                net, liq, pfee, pinv, pgrid = vals
-                                if (mm, fee, path) == (main_mm, main_fee, main_path):
-                                    samples.setdefault(key, []).append(net)
-                                    r = sums.setdefault(key, [0, 0.0, 0.0, 0.0, 0])
-                                    r[0] += 1
-                                    r[3] += pfee
-                                    if pgrid == pgrid:      # 非 NaN（close/recover 不提供拆解）
-                                        r[1] += pgrid; r[2] += pinv; r[4] += 1
-                                else:
-                                    r = agg.setdefault(key, [0, 0.0, 0])
-                                    r[0] += 1; r[1] += net; r[2] += liq
-
-        el = time.time() - t0
-        print(f"  … 累計 {n_ep} episodes，{el:.1f}s（{n_ep / max(el, 1e-9):.0f} ep/s）",
-              flush=True)
+    # imap（非 imap_unordered）保證回傳順序 = sorted(files) 順序，
+    # 使合併後的錨點序列與單行程一致。
+    with Pool(processes=nproc) as pool:
+        for pair, n_anc, ne, s_, u_, g_, ap, aw in pool.imap(_run_one_pair, jobs):
+            n_ep += ne
+            anchor_pair.extend(ap)
+            anchor_week.extend(aw)
+            for k, v in s_.items():
+                samples.setdefault(k, []).extend(v)
+            for k, v in u_.items():
+                r = sums.setdefault(k, [0, 0.0, 0.0, 0.0, 0])
+                for i in range(5):
+                    r[i] += v[i]
+            for k, v in g_.items():
+                r = agg.setdefault(k, [0, 0.0, 0])
+                for i in range(3):
+                    r[i] += v[i]
+            el = time.time() - t0
+            print(f"[{pair}] {n_anc} 錨點 / {ne} episodes｜累計 {n_ep}，"
+                  f"{el:.1f}s（{n_ep / max(el, 1e-9):.0f} ep/s）", flush=True)
 
     _write_outputs(args.out_prefix, samples, sums, agg, anchor_pair, anchor_week)
     print(f"[done] {n_ep} episodes，{time.time() - t0:.1f}s")

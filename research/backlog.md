@@ -8,6 +8,21 @@
 
 ## 問題清單
 
+- **Q8 `probe` open（2026-08-03，人類發起，非迴圈輪次）** —
+  **RND_BACKLOG 方向一 Phase 1：撮合回放器。** Phase 0 閘門已通過（Q1 於 run 1/2/4/6
+  判 supports，run6 YZ/GK 三方同向），依 `docs/RND_BACKLOG.md` 解鎖 Phase 1。
+  - 要回答：區間半幅 W × 槓桿 L × 出區間策略下，持有 T 天的**淨損益分佈**與強平機率。
+  - 凍結網格、度量、kill criteria、已知限制全部寫死在 **`docs/GRID_SIM_PREREG.md`**，
+    該檔於任何回放結果產生前先行 commit（bed3a48），引擎後至（df860d2）——
+    git 時序即 §4.1 要求的凍結證據。
+  - 外部起因：第三方 repo `beibei030/classic-grid` 出廠 30x／±4.6%／80 格／無停損。
+    其設定是凍結網格中的一個具名格位，不是唯一標的。
+  - 資料：10 標的 **1m** K 線、2023-01-01~2026-06-30（與 Q2'' 延長窗口一致），
+    由 `fetch_klines.py --interval 1m` 抓取，**該檔一行未改**。
+  - ⚠ 本題由人類發起、在迴圈排程到期（`SCHEDULE_UNTIL: 2026-08-02`）之後執行，
+    故**不佔用 LEDGER 的 run 序號**；留痕在 `research/log/2026-08-03.md` 與本檔。
+  - 結論待填（結案時移入「已結案」段）。
+
 - **Q2'' `probe` closed（2026-08-02 run5）** — 延長窗口全網格重跑＋時期分層。
   結論見「已結案」段。
 
