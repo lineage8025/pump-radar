@@ -31,8 +31,9 @@
   種子 `data/insample_scored.tsv` 是樣本內 235 筆的計分明細，動它=動基準，別碰。
 
 ## 自主研究迴圈（autoresearch，2026-08-01 起）
-- `.github/workflows/claude-autoresearch.yml`，**夜間排程班**（台北 02:05/03:35/05:05/06:35 各一輪，cron 寫 UTC）＋隨時可手動 `workflow_dispatch`（可帶 `focus`）。設計借自 karpathy/autoresearch 的 program.md 模式。
-- **排程是自我到期的**：GitHub cron 沒有「只跑一次」，所以用 env `SCHEDULE_UNTIL`（台北日期，含當日）＋第一個 gate step 控制——過期的排程幾秒內跳過、不喚醒 agent，不必靠人記得去 Disable。**目前設 `2026-08-02`＝只測那一晚**；要續跑就改這個日期。手動觸發不受此限。
+- `.github/workflows/claude-autoresearch.yml`，**每 2 小時一輪的排程班**（12 輪/天，每奇數 UTC 小時 :25＝台北 09:25/11:25/…/07:25）＋隨時可手動 `workflow_dispatch`（可帶 `focus`）。設計借自 karpathy/autoresearch 的 program.md 模式。
+- **排程是自我啟停的**：GitHub cron 沒有「從某天跑到某天」，所以用 env `SCHEDULE_FROM` / `SCHEDULE_UNTIL`（台北日期，兩端含當日）＋第一個 gate step 控制——過早或過期都幾秒內跳過、不喚醒 agent，不必靠人記得去 Enable/Disable。**目前設 `2026-08-06`~`2026-08-08`＝每 2 小時制的 36 輪試跑期**；要續跑就改 `SCHEDULE_UNTIL`。手動觸發不受此限。
+- **交易化階段（2026-08-05 起）**：目標擴大為「找出能真實交易的方向與策略」，新增位階高於 program.md 的 `docs/TRADEABILITY_PREREG.md`——①紅線 4 的精確化界定（人類簽署）＋可機械判定的**符號翻轉檢定**；②**假設預算**（LEDGER summary 以 `[cells=N]` 開頭）與 Bonferroni 族系錯誤率調整；③**holdout 封存**（研究只准用 2023-01-01~2025-06-30，2025-07-01 之後禁讀，guard step 掃 `experiments/` 新增行的 `--start/--end` 參數）；④五關升級判準，agent 權限上限是關 3、**不得自行宣告策略可用**。研究方向見 `docs/RND_BACKLOG.md` 方向二（振幅形狀／可捕獲趨勢比 R，backlog Q10）與方向三（aggTrades 逐筆校準，Q11）。
 - 排程雷：①`schedule` 事件的 `github.actor` 不保證是 repo owner，觸發者閘要加 `github.event_name == 'schedule'` 否則靜默不執行；②cron 分鐘錯開整點（整點負載高易延遲/丟棄）；③間隔 90 分鐘＝job timeout 上限，避免撞 `concurrency` 佇列被頂掉；④gate 算台北日期要用 python3 zoneinfo，`TZ=Asia/Taipei date` 在缺 tzdata 的環境會悄悄退回 UTC 而差一天。
 - Actions 分鐘數不計費（public repo 用標準 GitHub-hosted runner 免費），**唯一成本是 Claude 訂閱額度**。
 - **夜間班節流**（program.md §2.1）：一晚 4 輪但 backlog 工作量遠少於 4 輪，沒事做的輪次規定寫 `status=blocked` 後結束，禁止重跑已完成探針或換角度重切同一份數據充數——帳本連續 `blocked` 是「backlog 空了」的訊號，補題或關排程由人決定。
