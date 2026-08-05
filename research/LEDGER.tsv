@@ -7,3 +7,5 @@ date	run	questions	lane	status	summary
 2026-08-02	6	Q1'''	probe	supports	YZ/GK交叉驗證Q1主效應(ORIG窗口24h最低vs最高桶p80差距):GK+2.155pp CI[+1.473,+2.984],YZ+2.171pp CI[+1.510,+2.957],皆不含0且與Parkinson range主結果+2.760pp方向一致,三方一致判supports,削弱漂移偏誤為主要驅動力疑慮但未完全排除
 2026-08-02	7	Q4	tooling	inconclusive	Q4 forward證據盲點:開PR#8提案daily_pulse_dispatch.py新增archive_issue()把當日payload存成issue,純加法不影響既有Discord dispatch;未驗證(token scope/label待人類確認),Q4維持open待review非結案,非probe無directional證據
 2026-08-05	8	Q10	probe	weakens	[cells=24]方向二Phase0形狀檢定:24格僅1格([0.10,0.25)x24h dR=+0.0171)過Bonferroni調整CI[+0.0018,+0.0331],但可捕獲報酬上界僅0.0886%(全網格調整CI上界最大0.1838%)遠低於0.28%門檻→結局②不進Phase1;滑價歸零門檻仍0.20%亦打不過
+2026-08-05	9	Q11	probe	error	[cells=0] 骨架日誌提交後job中斷,無探針程式碼/資料輸出/ledger行,已於run10補記後重做
+2026-08-05	10	Q11	probe	inconclusive	[cells=0] 方向三PhaseA完成(非假設檢定,無directional證據):BTC/ETH/SOL x 2024-01~03逐日aggTrades聚合成1m摘要,9/9標的-月零缺天零缺分鐘,BTC 2024-01 resample 15m與官方K線2976根誤差0,ETH/SOL未交叉驗證;PhaseB(重跑Q8結案Q9)待下輪
