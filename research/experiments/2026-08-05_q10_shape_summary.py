@@ -1,0 +1,32 @@
+import pandas as pd
+import numpy as np
+t = pd.read_csv("research/experiments/2026-08-05_q10_shape_grid.tsv", sep="\t")
+t["sig95"] = (t.dR_lo95 > 0) | (t.dR_hi95 < 0)
+t["sigADJ"] = (t.dR_loADJ > 0) | (t.dR_hiADJ < 0)
+t["sigADJm"] = (t.dRm_loADJ > 0) | (t.dRm_hiADJ < 0)
+print("cells:", len(t), " n total:", t.n.sum())
+print("未調整 95% CI 不含 0 的格位數:", int(t.sig95.sum()))
+print("Bonferroni 調整後不含 0 的格位數:", int(t.sigADJ.sum()), " 鏡射版:", int(t.sigADJm.sum()))
+print("\n-- 未調整顯著的格位 --")
+print(t[t.sig95][["bucket", "T_h", "n", "dR", "dR_lo95", "dR_hi95", "dR_loADJ", "dR_hiADJ",
+                  "cap_pct", "cap_hiADJ_pct"]].to_string(index=False))
+print("\n-- 調整後仍顯著 --")
+print(t[t.sigADJ][["bucket", "T_h", "n", "dR", "dR_mirror", "dR_loADJ", "dR_hiADJ",
+                   "amp_mean_pct", "cap_pct", "cap_lo95_pct", "cap_hi95_pct",
+                   "cap_loADJ_pct", "cap_hiADJ_pct"]].to_string(index=False))
+print("\n可捕獲報酬上界（cap_pct）全網格 max = %.4f%%  (門檻 0.28%%)" % t.cap_pct.max())
+print("其 99.79%% CI 上界全網格 max = %.4f%%" % t.cap_hiADJ_pct.max())
+print("95%% CI 上界全網格 max = %.4f%%" % t.cap_hi95_pct.max())
+print("\n|dR - dR_mirror| max over cells = %.6f" % (t.dR - t.dR_mirror).abs().max())
+print("\n-- dR 逐分桶 x T（點估計）--")
+print(t.pivot(index="bucket", columns="T_h", values="dR").round(4).to_string())
+print("\n-- E[A+B] %% 逐分桶 x T --")
+print(t.pivot(index="bucket", columns="T_h", values="amp_mean_pct").round(3).to_string())
+print("\n-- E|net|/E[A+B]（隨機游走理論值 0.5）--")
+r = (t.absnet_mean_pct / t.amp_mean_pct)
+t2 = t.assign(ratio=r)
+print(t2.pivot(index="bucket", columns="T_h", values="ratio").round(3).to_string())
+print("\n-- R_flip 均值（對照組基準）--")
+print(t.pivot(index="bucket", columns="T_h", values="R_flip_mean").round(4).to_string())
+s = pd.read_csv("research/experiments/2026-08-05_q10_shape_samples.tsv", sep="\t")
+print("\n每標的錨點數:\n", s.pair.value_counts().to_string())

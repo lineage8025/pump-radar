@@ -6,3 +6,4 @@ date	run	questions	lane	status	summary
 2026-08-02	5	Q2''	probe	weakens	延長窗口2023-01~2026-06全網格重跑:極端壓縮兩桶event n=42/51過門檻但24h p80差距CI仍含0,六桶合併+0.286pp CI[-0.185,+0.754]含0;時期分層P1/P2 Q1效應+3.671/+2.760pp CI皆不含0削弱regime混淆反駁;原窗口完全重現run1/run3
 2026-08-02	6	Q1'''	probe	supports	YZ/GK交叉驗證Q1主效應(ORIG窗口24h最低vs最高桶p80差距):GK+2.155pp CI[+1.473,+2.984],YZ+2.171pp CI[+1.510,+2.957],皆不含0且與Parkinson range主結果+2.760pp方向一致,三方一致判supports,削弱漂移偏誤為主要驅動力疑慮但未完全排除
 2026-08-02	7	Q4	tooling	inconclusive	Q4 forward證據盲點:開PR#8提案daily_pulse_dispatch.py新增archive_issue()把當日payload存成issue,純加法不影響既有Discord dispatch;未驗證(token scope/label待人類確認),Q4維持open待review非結案,非probe無directional證據
+2026-08-05	8	Q10	probe	weakens	[cells=24]方向二Phase0形狀檢定:24格僅1格([0.10,0.25)x24h dR=+0.0171)過Bonferroni調整CI[+0.0018,+0.0331],但可捕獲報酬上界僅0.0886%(全網格調整CI上界最大0.1838%)遠低於0.28%門檻→結局②不進Phase1;滑價歸零門檻仍0.20%亦打不過
