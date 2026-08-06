@@ -9,3 +9,4 @@ date	run	questions	lane	status	summary
 2026-08-05	8	Q10	probe	weakens	[cells=24]方向二Phase0形狀檢定:24格僅1格([0.10,0.25)x24h dR=+0.0171)過Bonferroni調整CI[+0.0018,+0.0331],但可捕獲報酬上界僅0.0886%(全網格調整CI上界最大0.1838%)遠低於0.28%門檻→結局②不進Phase1;滑價歸零門檻仍0.20%亦打不過
 2026-08-05	9	Q11	probe	error	[cells=0] 骨架日誌提交後job中斷,無探針程式碼/資料輸出/ledger行,已於run10補記後重做
 2026-08-05	10	Q11	probe	inconclusive	[cells=0] 方向三PhaseA完成(非假設檢定,無directional證據):BTC/ETH/SOL x 2024-01~03逐日aggTrades聚合成1m摘要,9/9標的-月零缺天零缺分鐘,BTC 2024-01 resample 15m與官方K線2976根誤差0,ETH/SOL未交叉驗證;PhaseB(重跑Q8結案Q9)待下輪
+2026-08-06	11	Q9,Q11	probe	supports	[cells=0] ETH/SOL交叉驗證誤差0;真實路徑重跑頭條格位+18個Q9翻轉組態,real 97-100%落在[auto,reverse]界內且距auto僅0.08-0.19pp(reverse 5.7-19.5pp);115格中91格(79%)落auto側負,經濟量級>1%的40格全站auto側,reverse側24格皆<0.5%屬雜訊;Q9部分結案(僅3標的3月)
