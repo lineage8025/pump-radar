@@ -89,6 +89,46 @@ def dispatch(token: str, repo: str, payload: dict) -> int:
 
 
 ARCHIVE_LABEL = "daily-pulse-archive"
+# issue body 上限 65536 字元；每列 TSV 約 75 字元，5000 列 ≈ 375KB 遠超上限，
+# 但真正的量級是 ~3.5 則/天，5000 列 ≈ 4 年份——這個值等於「實務上不會截斷」的防爆保險。
+MAX_SERIES_ROWS = 5000
+
+
+def _http_err_detail(e: urllib.error.HTTPError) -> str:
+    """GitHub 在 4xx 的 body 裡會寫明原因（哪個欄位、為什麼），不印出來就只剩一個狀態碼。
+    archive issue 的 label 與 close 在 production 一直沒生效（見 backlog Q4），
+    但現有 log 只有例外字串，無從判斷是權限、欄位還是 label 不存在。"""
+    try:
+        return (e.read() or b"").decode()[:300]
+    except Exception:
+        return ""
+
+
+def _forward_series_block(scored) -> str:
+    """把完整 forward 計分序列附成 TSV 區塊，讓 CI 端能自行重算分級拆解與 bootstrap CI。
+
+    **只進 archive issue，不進 dispatch payload**：`repository_dispatch` 的 client_payload
+    有 64KB 上限，且日報 workflow 只需要聚合數字；把逐筆塞進 payload 等於拿「每天在動的
+    日報」去冒險換「偶爾才用的研究資料」，不划算。issue 這條路是純附加的，壞了也只是沒存檔。
+
+    任何例外都吞掉回傳空字串——存檔失敗不得影響已完成的 dispatch。"""
+    try:
+        if scored is None or not len(scored):
+            return ""
+        cols = [c for c in ("ts", "pair", "grade", "ret_24h", "net_24h", "mfe_24h", "mae_24h")
+                if c in scored.columns]
+        if not cols:
+            return ""
+        df = scored[cols]
+        omitted = max(0, len(df) - MAX_SERIES_ROWS)
+        if omitted:
+            df = df.tail(MAX_SERIES_ROWS)
+        note = f"，最舊 {omitted} 列因體積上限省略" if omitted else ""
+        return (f"\n\n### forward_scored_series（n={len(df)}{note}）\n\n"
+                "```tsv\n" + df.to_csv(sep="\t", index=False).rstrip("\n") + "\n```")
+    except Exception as e:
+        print(f"[pulse] forward_series_block failed, 略過附表: {e}", flush=True)
+        return ""
 
 
 def _gh_json(token: str, url: str, body: dict, method: str = "POST") -> dict:
@@ -104,9 +144,13 @@ def _gh_json(token: str, url: str, body: dict, method: str = "POST") -> dict:
         return json.loads(resp.read() or b"{}")
 
 
-def archive_issue(token: str, repo: str, payload: dict) -> None:
+def archive_issue(token: str, repo: str, payload: dict, scored=None) -> None:
     """把當日 payload 存成 issue，讓 autoresearch 迴圈在 CI 裡也能看到 forward 證據
     （journal 只在 NAS、日報只推 Discord 不留存，CI 目前完全看不到 forward 數據）。
+
+    `scored`＝完整的 forward 計分表（`.scored_forward.tsv`）。payload 只帶聚合數字
+    （mean／勝率／n），算不了分級拆解與 bootstrap CI；升級判準的結算需要逐筆序列，
+    故另附 TSV 區塊，見 `_forward_series_block`。
 
     **建立後立刻關閉**：存檔資料不需要 open 狀態，而一天一則、一年 365 則全部 open
     會把 `Research:` issue 淹掉、讓 issues 分頁失去可用性。迴圈讀取時帶
@@ -116,15 +160,19 @@ def archive_issue(token: str, repo: str, payload: dict) -> None:
     所以全程吞例外只印 log。若 token 缺 issues:write 會是 403，日報照常、只是沒有存檔。"""
     url = f"https://api.github.com/repos/{repo}/issues"
     body = {"title": f"Daily Pulse Archive: {payload['date_taipei']}",
-            "body": "```json\n" + json.dumps(payload, ensure_ascii=False, indent=2) + "\n```",
+            "body": ("```json\n" + json.dumps(payload, ensure_ascii=False, indent=2)
+                     + "\n```" + _forward_series_block(scored)),
             "labels": [ARCHIVE_LABEL]}
     try:
         try:
             issue = _gh_json(token, url, body)
         except urllib.error.HTTPError as e:
+            detail = _http_err_detail(e)
             if e.code != 422:  # 422＝label 不存在之類的驗證錯誤；其餘不重試
+                print(f"[pulse] archive_issue create HTTP {e.code}: {detail}", flush=True)
                 raise
             # 去掉 label 重試：能存下來比帶標籤重要，但這樣就只能靠標題前綴找到它
+            print(f"[pulse] archive_issue 422，去 label 重試: {detail}", flush=True)
             body.pop("labels")
             issue = _gh_json(token, url, body)
     except Exception as e:
@@ -135,7 +183,10 @@ def archive_issue(token: str, repo: str, payload: dict) -> None:
         return
     try:
         _gh_json(token, f"{url}/{num}", {"state": "closed"}, method="PATCH")
-    except Exception as e:  # 建立成功但沒關掉：資料在，只是會佔著 open
+    except urllib.error.HTTPError as e:  # 建立成功但沒關掉：資料在，只是會佔著 open
+        print(f"[pulse] archive_issue #{num} close failed HTTP {e.code}: "
+              f"{_http_err_detail(e)}", flush=True)
+    except Exception as e:
         print(f"[pulse] archive_issue #{num} close failed: {e}", flush=True)
 
 
@@ -215,7 +266,7 @@ def main() -> None:
         MARKER.touch()
         state["reported"] += [s["ts"] + s["pair"] for s in newly_scored]
         STATE.write_text(json.dumps(state))
-        archive_issue(token, repo, payload)
+        archive_issue(token, repo, payload, scored)
         print(f"[pulse {hb}] dispatched: {len(new_signals)} new, "
               f"{len(newly_scored)} scored", flush=True)
     else:
