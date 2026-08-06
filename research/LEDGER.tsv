@@ -11,3 +11,4 @@ date	run	questions	lane	status	summary
 2026-08-05	10	Q11	probe	inconclusive	[cells=0] 方向三PhaseA完成(非假設檢定,無directional證據):BTC/ETH/SOL x 2024-01~03逐日aggTrades聚合成1m摘要,9/9標的-月零缺天零缺分鐘,BTC 2024-01 resample 15m與官方K線2976根誤差0,ETH/SOL未交叉驗證;PhaseB(重跑Q8結案Q9)待下輪
 2026-08-06	11	Q9,Q11	probe	supports	[cells=0] ETH/SOL交叉驗證誤差0;真實路徑重跑頭條格位+18個Q9翻轉組態,real 97-100%落在[auto,reverse]界內且距auto僅0.08-0.19pp(reverse 5.7-19.5pp);115格中91格(79%)落auto側負,經濟量級>1%的40格全站auto側,reverse側24格皆<0.5%屬雜訊;Q9部分結案(僅3標的3月)
 2026-08-06	12	Q11	probe	error	[cells=0] Phase C骨架日誌(commit 024c57a)提交後job中斷,無探針程式碼/資料輸出/ledger行,依program.md 1.3由run13補記
+2026-08-06	13	Q13,Q10	audit	inconclusive	[cells=0] run8(Q10)獨立復算稽核(audit,無directional證據,方向二M維持24):24格決定性統計量逐位元重現,9010錨點A/B/R改由15m獨立資料路徑重算|ΔR|>1e-6列數0/9010,bbw_pct與桶別0不一致,diag丟棄計數10/10守恆;唯一修正為精度限定-未調整顯著「5格」在預登記boot=20000下實為4~6格(2刀鋒格),boot=400000才收斂5格;判準數字全穩(調整後1格14/14一致,cap上界≤0.189%<0.20%)故Q10 weakens裁決不變
