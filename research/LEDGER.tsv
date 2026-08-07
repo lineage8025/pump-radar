@@ -21,3 +21,4 @@ date	run	questions	lane	status	summary
 2026-08-07	20	Q11	probe	error	[cells=0] 骨架日誌(commit 8a8c225)提交後job中斷,無探針程式碼/資料輸出/ledger行,計畫(擴大Phase A/B至ADA/DOGE/BNB/LTC共10標的)由run21原地續做
 2026-08-07	21	Q11	probe	error	[cells=0] 骨架日誌(research/log/2026-08-07-run21.md,SHA因shallow clone不可考)提交後job中斷,無探針程式碼/資料輸出/ledger行,依program.md 1.3由run22補記;計畫與run20相同,連續第二次撞同一失敗模式,人類已登記為Q15
 2026-08-07	22	Q16,Q10	audit	inconclusive	[cells=0] Q10聚合式覆核(無directional證據,M維持24):cap_prod對run8逐位元重現(1.1e-16pp);Cov(dR,amp)24/24格全正、配對式E[dR*amp]頭條0.0886->0.2157%,但純iid H0安慰劑證偽此表象(dR|z|<=1.63卻cov全正、corr+0.24~+0.30)=>配對式虛無下即有正偏、無效;偏差差n倍(Cov vs Cov/n)=>預登記乘積式是唯一H0置中候選,選對了但理由本輪才補;三版本最大0.0886/0.2157/0.1429%全<0.28%,Q10 weakens不變;新記精度限定-run8反駁3「四門檻全打不過」是聚合式相依的
+2026-08-07	23	(none)	-	blocked	[cells=0] backlog盤點:全部open/watching項目(Q15/Q11/Q12/Q16prime/Q4)均待人類裁決或review,Q5距上次文獻調研僅6天不值得重掃,誠實記blocked;順手修正Q7狀態標籤(人類裁決早存在,header未同步)
