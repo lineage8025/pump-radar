@@ -8,6 +8,21 @@
 
 ## 問題清單
 
+- **run25（2026-08-07，`audit`）— Q17 新開即結案：Q4 遺漏資料補算** —
+  run24 的 Q4 結案「限制段」曾寫「A/B 分級各自的 forward net_24h mean/勝率
+  查不到」。本輪查證發現 **PR #18**（2026-08-06 合併，早於 run24 逾 24 小時）
+  已在 `archive_issue()` 附加完整 `forward_scored_series` TSV，issue #19
+  （2026-08-07 存檔）body 裡其實已含 n=97 逐筆序列——run24 讀到了同一個
+  issue，只是沒有讀完附加區塊。本輪逐筆重算：**A 級** n=40，net_24h mean
+  −0.348%、勝率恰 50.00%（20/40，卡在門檻線）；**B 級** n=57，mean −0.116%、
+  勝率 50.88%；全體重算 −0.212%/50.52% 與 production payload 的 −0.21%/51%
+  吻合（獨立交叉驗證聚合正確）。`docs/DETECTOR_PREREG.md` 升級判準（任一
+  分級 mean>0 且勝率>50%）**A/B/全體三組全部未同時滿足**，run24 的「未達標」
+  結論不變但現在三組都可覆核，不再只有「全體」一組。`[cells=0]`，不觸碰
+  holdout（forward journal 事件時間戳皆 2026-07 之後）。詳見
+  `research/log/2026-08-07-run25.md`。**Q4 原文「下次建議起點」第 3 點
+  （建議開 tooling PR 拆分分級）已過時——資料已存在，不需要新 PR。**
+
 - **run24（2026-08-07，`audit`）— Q4 結案** — 查證 `research/backlog.md` 對 Q4
   的狀態描述（「PR #8 待人類 review」）已過時 5 天：PR 實際已於 2026-08-02 合併，
   五天存檔穩定運行。本輪一併完成 Q4 原文預告的「讀取累積 issue」後續，讀取
@@ -333,6 +348,17 @@
 | — | — | — | — |
 
 ## 已結案
+
+- **Q17**（closed 2026-08-07 run25，`audit`，**無新 directional 證據，修正 run24
+  遺留的資料可得性誤判**）— **Q4 補充：forward 分級（A/B）結算首次補算。**
+  `[cells=0]`。run24 稱「A/B 分級各自的 forward mean/勝率查不到」，本輪查證
+  PR #18（2026-08-06 合併）已使 issue #19 的 archive body 附帶完整 97 筆
+  `forward_scored_series`（含 `grade` 欄），run24 讀了同一份 issue 卻沒讀完
+  附加區塊。逐筆重算：A 級 n=40 mean −0.348% 勝率 50.00%（20/40，恰卡門檻）；
+  B 級 n=57 mean −0.116% 勝率 50.88%；全體重算與 production 聚合值吻合
+  （首次獨立驗證 forward 聚合算得對）。升級判準三組全部未同時達標，
+  run24「未達標」結論不變，但覆核範圍從「僅全體」補齊為「全部三組」。
+  詳見 `research/log/2026-08-07-run25.md`。
 
 - **Q4**（closed 2026-08-07 run24，`audit`，**無新 directional 證據，補上 tooling 車道未完成的後續**）—
   **forward 證據盲點。** 本輪查證 `gh pr view 8` 發現 PR #8 **已於 2026-08-02T23:41:54Z
