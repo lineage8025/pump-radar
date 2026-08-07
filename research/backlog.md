@@ -8,6 +8,13 @@
 
 ## 問題清單
 
+- **run24（2026-08-07，`audit`）— Q4 結案** — 查證 `research/backlog.md` 對 Q4
+  的狀態描述（「PR #8 待人類 review」）已過時 5 天：PR 實際已於 2026-08-02 合併，
+  五天存檔穩定運行。本輪一併完成 Q4 原文預告的「讀取累積 issue」後續，讀取
+  forward journal 匯總數字並對照 `docs/DETECTOR_PREREG.md` 升級判準（未達標，
+  門檻未觸發，趨勢中性）。詳見 `research/log/2026-08-07-run24.md` 與下方「已結案」
+  Q4 條目。其餘問題（Q15/Q11/Q12/Q16'/Q5）狀態同 run23，未變。
+
 - **run23 狀態盤點（2026-08-07，非新問題，`blocked`）** — 本輪逐條核對問題清單，
   **agent 可自行執行的工作為空**：Q15（開新 Q11 輪次需等 Q15 裁決）、Q11（同上，已
   被 Q15 擋住）、Q12（待人類裁決）、Q16'（待人類裁決）、Q4（待人類 review PR#8）、
@@ -285,16 +292,11 @@
 - **Q1''' `probe` closed（2026-08-02 run6）** — YZ/GK 交叉驗證 Q1 主效應。
   結論見「已結案」段。
 
-- **Q4 `tooling` open（2026-08-02 run7 已開 PR #8，待人類 review，未結案）** — **forward 證據盲點。**
-  本迴圈在 CI 內看不到任何 forward 數據（journal 在 NAS、日報只推 Discord 不留存）。
-  run7 交出提案：`https://github.com/lineage8025/pump-radar/pull/8`（分支
+- **Q4 `tooling` closed（2026-08-07 run24，audit 校正＋補完後續動作）** — **forward 證據盲點。**
+  結論見「已結案」段。（原文保留備查：run7 交出提案
+  `https://github.com/lineage8025/pump-radar/pull/8`（分支
   `research/q4-daily-pulse-archive-issue`）——`daily_pulse_dispatch.py` 在既有 Discord
-  dispatch 成功後，額外呼叫 GitHub Issues API 把當日 payload 存成一個 issue。純加法，
-  不影響既有流程；未實跑驗證，**token scope（是否涵蓋 issues:write）與
-  `daily-pulse-archive` label 建立都待人類確認**，PR 說明已列清楚。**只開 PR 提案，
-  不得自行實作上線**——維持 `open` 直到人類 review／合併／觀察穩定運行後才能結案；
-  即使合併，也只解決「資料可及性」，還需要下一輪去讀取累積的 issue 才算真正覆盤 forward
-  （見 `research/log/2026-08-02.md` Run 7 最強反駁 1）。
+  dispatch 成功後，額外呼叫 GitHub Issues API 把當日 payload 存成一個 issue。）
 
 - **Q5 `lit` watching** — 承接 `docs/RESEARCH_BBW_VOLATILITY.md` §6 的缺口：
   加密貨幣專屬、同儕審查、直接檢定「BBW squeeze 對後續振幅有無區別力」的一手論文**查不到**。
@@ -331,6 +333,35 @@
 | — | — | — | — |
 
 ## 已結案
+
+- **Q4**（closed 2026-08-07 run24，`audit`，**無新 directional 證據，補上 tooling 車道未完成的後續**）—
+  **forward 證據盲點。** 本輪查證 `gh pr view 8` 發現 PR #8 **已於 2026-08-02T23:41:54Z
+  合併**（run7 開出後幾小時內，早於 run8），`scripts/daily_pulse_dispatch.py` 的
+  `archive_issue()` 已在 main 上運行五天，產生 5 個 `Daily Pulse Archive` issue
+  （#10/#11/#12/#16/#19，2026-08-03~07，零缺天）。**backlog 文字自 run7 起 16 輪
+  未更新，是本輪才發現的落差**——run8~23 的 SETUP 只讀 backlog 文字，未對 PR/issue
+  即時狀態做外部查證。
+  - **token scope 已由存檔本身間接證實足夠**（`issues:write` 有效，否則 5 個 issue
+    不會存在）；`daily-pulse-archive` label 未建立但按 PR 說明自動降級，不影響存檔。
+  - **本輪一併完成 Q4 原文預告的「下一步」**：讀取 5 天累積的 forward
+    `forward_progress` 數字，對照 `docs/DETECTOR_PREREG.md` 升級判準
+    （「forward ≥100 筆，任一分級 mean>0 且勝率>50%」）：
+    `scored_total` 79→84→87→91→97（尚未達 100，門檻未觸發）；
+    `forward_net24h_mean_pct` 連續 5 天為負（−0.13%~−0.21%，走勢略更負）；
+    `forward_win_pct` 連續 5 天 >50%（51%~54%）但因 mean 為負，AND 條件不成立。
+    **只有「全體」分級可覆核**——payload 未拆分 A/B 各自的 forward mean/勝率，
+    `newly_scored` 只是當日增量（5 天合計 19 筆），不足以重算 97 筆全期分級統計，
+    是本輪留下的資訊缺口。5 天趨勢樣本太小，不構成統計推論，僅描述性記錄。
+  - **結論保守表述**：forward 證據目前與 CLAUDE.md 定位一致（net_24h 為負，
+    不是買賣依據），無跡象指向需要重新討論定位，也尚未到預登記的結算門檻。
+  - `[cells=0]`，不適用符號翻轉檢定（未提出新命題）；資料窗口非歷史 K 線回放，
+    與 §4 holdout 封存段無關（forward journal 是獨立於研究窗口之外的既有預登記範疇）。
+  - 詳見 `research/log/2026-08-07-run24.md`。
+  - **下次建議起點**：①CLAUDE.md/program.md「CI 拿不到 forward 證據」描述已過時，
+    是否更新文字與是否收編為固定車道由人類決定；②`scored_total` 依目前速度預計
+    數天內跨過 100，屆時可正式結算「全體」一項升級判準（但仍是屆時才能下判定）；
+    ③A/B 分級各自的 forward 統計若需要，屬 `daily_pulse_dispatch.py` 的 tooling
+    改動，agent 只能提案不能直接做。
 
 - **Q14**（closed 2026-08-07 run 18，`audit`，**無新 directional 證據**）— **Q10 對照組
   `R_flip` 的獨立實作復驗。** 本輪格位數 0，方向二累計 M 維持 24。
