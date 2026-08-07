@@ -14,3 +14,4 @@ date	run	questions	lane	status	summary
 2026-08-06	13	Q13,Q10	audit	inconclusive	[cells=0] run8(Q10)獨立復算稽核(audit,無directional證據,方向二M維持24):24格決定性統計量逐位元重現,9010錨點A/B/R改由15m獨立資料路徑重算|ΔR|>1e-6列數0/9010,bbw_pct與桶別0不一致,diag丟棄計數10/10守恆;唯一修正為精度限定-未調整顯著「5格」在預登記boot=20000下實為4~6格(2刀鋒格),boot=400000才收斂5格;判準數字全穩(調整後1格14/14一致,cap上界≤0.189%<0.20%)故Q10 weakens裁決不變
 2026-08-06	14	Q9,Q11	probe	error	[cells=0] 骨架日誌(commit 877b3479)提交後job中斷,無探針程式碼/資料輸出/ledger行,依program.md 1.3由run15補記;原計畫擴大Phase A/B至XRP/LINK/AVAX共6標的
 2026-08-06	15	Q9,Q11	probe	error	[cells=0] 骨架日誌(commit b7b1c73)提交後job中斷,無探針程式碼/資料輸出;計畫(擴大Phase A/B至XRP/LINK/AVAX共6標的)由run16原地續做
+2026-08-07	16	Q9,Q11	probe	error	[cells=0] 骨架日誌(commit 1e55586)提交後job中斷,無探針程式碼/資料輸出;計畫(擴大Phase A/B至XRP/LINK/AVAX共6標的)由run17原地續做
