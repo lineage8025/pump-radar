@@ -1,0 +1,14 @@
+T=1d: n_episode=34770, real落在[auto,reverse]界內=33598 (96.6%)
+  path=auto     n= 366 mean=  -5.86% median=  +1.63% liq_rate=  3.6% CI95=[-9.35,-2.85]%
+  path=reverse  n= 366 mean=  +0.27% median=  +3.86% liq_rate=  2.2% CI95=[-3.04,+2.96]%
+  path=real     n= 366 mean=  -5.78% median=  +1.64% liq_rate=  3.6% CI95=[-9.25,-2.80]%
+T=7d: n_episode=34770, real落在[auto,reverse]界內=33177 (95.4%)
+  path=auto     n= 366 mean= -39.37% median= -44.79% liq_rate= 47.3% CI95=[-52.99,-25.69]%
+  path=reverse  n= 366 mean= -16.89% median= -13.18% liq_rate= 39.9% CI95=[-33.97,+0.17]%
+  path=real     n= 366 mean= -39.17% median= -44.74% liq_rate= 47.3% CI95=[-52.83,-25.46]%
+T=30d: n_episode=34770, real落在[auto,reverse]界內=33423 (96.1%)
+  path=auto     n= 366 mean= -73.07% median=-100.00% liq_rate= 86.9% CI95=[-83.34,-61.51]%
+  path=reverse  n= 366 mean= -41.30% median=-100.00% liq_rate= 79.8% CI95=[-63.58,-15.97]%
+  path=real     n= 366 mean= -72.84% median=-100.00% liq_rate= 86.9% CI95=[-83.23,-61.15]%
+
+Q9 115 翻轉格位（本子集可評估 115 格，3標的x3月）：real 點估計落在 auto側(負)=90、reverse側(正)=25；115 格至少一次錨點 real 落在 [auto,reverse] 界外
