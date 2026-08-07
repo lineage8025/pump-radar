@@ -19,3 +19,4 @@ date	run	questions	lane	status	summary
 2026-08-07	18	Q14,Q10	audit	inconclusive	[cells=0] Q10對照組R_flip獨立實作復驗(audit,無directional證據,M維持24),補上run13自陳唯一缺口:ε≠+1分支三項確定性檢定逐位元通過(max|Δ|=0),獨立MC三組seed(含Philox,float64)24格差異max7.2e-4、|z|max2.29、|z|>3為0/24,ε抽樣無偏、float32影響僅1.7e-6;判定重推三組全得調整後1格([0.10,0.25)x24h),cap上界≤0.0914%、調整後CI上界≤0.1906%<0.20%<0.28%,Q10 weakens不變;Philox組多出的第6格正是run13指認刀鋒格
 2026-08-07	19	Q9,Q11	probe	supports	[cells=0] 窗口維度外部效度:選trend_ratio最小季(2024Q3=0.033,既有窗口0.817)重跑BTC/ETH/SOL,auto準確率幾乎不變(差距<=0.73pp),排除單邊漲勢人工產物反駁;頭條格位仍負;115翻轉格位100%落auto側但量級縮至<0.13%(既有窗口部分>1%)
 2026-08-07	20	Q11	probe	error	[cells=0] 骨架日誌(commit 8a8c225)提交後job中斷,無探針程式碼/資料輸出/ledger行,計畫(擴大Phase A/B至ADA/DOGE/BNB/LTC共10標的)由run21原地續做
+2026-08-07	21	Q11	probe	error	[cells=0] 骨架日誌(research/log/2026-08-07-run21.md,SHA因shallow clone不可考)提交後job中斷,無探針程式碼/資料輸出/ledger行,依program.md 1.3由run22補記;計畫與run20相同,連續第二次撞同一失敗模式,人類已登記為Q15
