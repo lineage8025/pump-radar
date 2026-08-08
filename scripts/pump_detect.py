@@ -5,6 +5,7 @@
 
 環境變數：
   DISCORD_WEBHOOK_URL   未設則只寫 journal 不通知
+  SIGNAL_DISCORD        逐則訊號推播開關，**預設 0（關閉）**，見下方 SIGNAL_DISCORD
   PAIRS                 預設 BTC/USDT,ETH/USDT,ADA/USDT,SOL/USDT
   EXCHANGE              預設 binance（僅用公開行情端點，無需 API key）
 """
@@ -28,6 +29,15 @@ SCORED_CACHE = LOG_DIR / ".scored_forward.tsv"
 STATS_FILE = LOG_DIR / ".grade_stats.json"
 FETCH_BARS = PARAMS["bbw_pct_window"] + PARAMS["bb_window"] + 50
 TAIPEI = timezone(timedelta(hours=8))
+
+# 逐則訊號推播開關。**2026-08-08 起預設關閉**——forward n=100 結算判準未達
+# （三個分級 net_24h mean 皆為負，毛報酬 +0.030% ≈ 0，見 docs/DETECTOR_PREREG.md「結算」段），
+# 訊號不帶可變現資訊。每天 ~3.5 則推播的唯一效果是製造「這東西有用」的錯覺，
+# 而錯覺會誘發照訊號下單——那是本專案定位紅線明文要防的事。
+# **資料照常累積**：journal 寫入發生在推播之前，計分、日報、archive issue 全不受影響。
+# 要重新開啟設 SIGNAL_DISCORD=1。刻意設計成「預設關、需明示開」而非相反，
+# 因為 Portainer 的 env 是整組替換（改 env 比重新部署麻煩，CLAUDE.md 實踩紀錄）。
+SIGNAL_DISCORD = os.environ.get("SIGNAL_DISCORD", "0").strip() == "1"
 
 
 def fetch_15m(ex, pair: str) -> pd.DataFrame:
@@ -94,17 +104,20 @@ def main() -> None:
         with JOURNAL.open("a") as f:
             f.write(json.dumps(ev, ensure_ascii=False) + "\n")
         tpe = last_bar["date"].astimezone(TAIPEI).strftime("%m-%d %H:%M")
-        squeeze = "壓縮後爆發" if ev["grade"] == "A" else "放量突破"
-        try:
-            notify_discord(
-                f"🚀 **[{ev['grade']}] {pair}** 15m 波段啟動（{squeeze}）\n"
-                f"收盤 {ev['close']:g} 上穿布林上軌 | vol_z={ev['vol_z']} "
-                f"bbw_pct={ev['bbw_pct']} | {tpe} 台北\n"
-                f"{stats_engine.outlook_line(ev['grade'], stats_engine.load_stats(STATS_FILE))}\n"
-                f"-# 歷史分佈隨 forward 自動更新，非方向預測；追漲期望詳分佈，非買賣建議"
-            )
-        except Exception as e:
-            print(f"[pump] discord notify failed: {e}", flush=True)
+        if SIGNAL_DISCORD:
+            squeeze = "壓縮後爆發" if ev["grade"] == "A" else "放量突破"
+            try:
+                notify_discord(
+                    f"🚀 **[{ev['grade']}] {pair}** 15m 波段啟動（{squeeze}）\n"
+                    f"收盤 {ev['close']:g} 上穿布林上軌 | vol_z={ev['vol_z']} "
+                    f"bbw_pct={ev['bbw_pct']} | {tpe} 台北\n"
+                    f"{stats_engine.outlook_line(ev['grade'], stats_engine.load_stats(STATS_FILE))}\n"
+                    f"-# 歷史分佈隨 forward 自動更新，非方向預測；追漲期望詳分佈，非買賣建議"
+                )
+            except Exception as e:
+                print(f"[pump] discord notify failed: {e}", flush=True)
+        else:  # 預設路徑：只記錄不推播，見上方 SIGNAL_DISCORD
+            print(f"[pump] signal logged (推播關閉): [{ev['grade']}] {pair} {tpe}", flush=True)
 
     STATE_FILE.write_text(json.dumps(state))
     stats_engine.maybe_refresh(JOURNAL, SCORED_CACHE, STATS_FILE)  # 每日一次，失敗不擋主流程
