@@ -8,6 +8,16 @@
 
 ## 問題清單
 
+- **run33 狀態盤點（2026-08-08，非新問題，`blocked`）** — 依 run32 建議做輕量
+  查證（issue 留言/標籤、open PR、Daily Pulse Archive）。結果與 run31/32 一致：
+  Q15／Q12／Q16′（#23／#24／#26）仍零留言零裁決類標籤；`gh pr list --state open`
+  為空；Daily Pulse Archive 最新仍是 #28（2026-08-08）。**新發現**：
+  `.github/workflows/claude-autoresearch.yml` 的 `SCHEDULE_UNTIL: "2026-08-08"`
+  ＝今天，即本輪落在每 2 小時制 36 輪試跑期的最後一個有效日，明天起排程班
+  會自我跳過，除非人類延長該值——此前四輪 blocked 盤點皆未提及此事實。
+  `[cells=0]`，誠實記 `blocked`。連續 `blocked` 已達 **5 輪**
+  （run23/26/31/32/33）。詳見 `research/log/2026-08-08-run33.md`。
+
 - **run32 狀態盤點（2026-08-08，非新問題，`blocked`）** — 依 run31 建議（「下輪
   不必再重複本輪的 API 查證……除非 backlog 或 issue 狀態有可疑更新的具體理由」）
   做**輕量版**（三項 API 查證：issue 留言/標籤、open PR、Daily Pulse Archive）
