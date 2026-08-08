@@ -1,0 +1,36 @@
+[BTC/USDT] both=901/901  spot重算vs run8 max|Δ|: amp=1.807e-15 R=1.711e-12
+[ETH/USDT] both=901/901  spot重算vs run8 max|Δ|: amp=1.860e-15 R=7.979e-13
+[ADA/USDT] both=901/901  spot重算vs run8 max|Δ|: amp=3.886e-16 R=6.872e-14
+[SOL/USDT] both=901/901  spot重算vs run8 max|Δ|: amp=1.006e-15 R=2.117e-13
+[XRP/USDT] both=901/901  spot重算vs run8 max|Δ|: amp=3.760e-16 R=7.305e-14
+[DOGE/USDT] both=901/901  spot重算vs run8 max|Δ|: amp=6.488e-16 R=1.916e-13
+[BNB/USDT] both=901/901  spot重算vs run8 max|Δ|: amp=1.006e-15 R=3.512e-13
+[LINK/USDT] both=901/901  spot重算vs run8 max|Δ|: amp=5.673e-16 R=1.126e-13
+[LTC/USDT] both=901/901  spot重算vs run8 max|Δ|: amp=1.006e-15 R=5.594e-13
+[AVAX/USDT] both=901/901  spot重算vs run8 max|Δ|: amp=7.598e-16 R=1.016e-13
+錨點 9010 個，2023-01-01 00:00:00 ~ 2025-06-29 02:45:00
+
+== 覆蓋率與現貨側正確性檢查 ==
+     pair  n_anchor  n_spot_ok  n_perp_ok  n_both  spot_vs_run8_maxabs_amp  spot_vs_run8_maxabs_R
+ BTC/USDT       901        901        901     901             1.806715e-15           1.710632e-12
+ ETH/USDT       901        901        901     901             1.859624e-15           7.979173e-13
+ ADA/USDT       901        901        901     901             3.885781e-16           6.872281e-14
+ SOL/USDT       901        901        901     901             1.006140e-15           2.117195e-13
+ XRP/USDT       901        901        901     901             3.760013e-16           7.305268e-14
+DOGE/USDT       901        901        901     901             6.487866e-16           1.916245e-13
+ BNB/USDT       901        901        901     901             1.005706e-15           3.511635e-13
+LINK/USDT       901        901        901     901             5.672546e-16           1.125766e-13
+ LTC/USDT       901        901        901     901             1.006140e-15           5.594414e-13
+AVAX/USDT       901        901        901     901             7.598089e-16           1.015854e-13
+
+== 現貨 vs USDT-M 永續（同錨點配對，不分桶；末列為頭條格位）==
+              scope  T_h    n  amp_spot_pct  amp_perp_pct  amp_ratio   R_spot   R_perp    R_diff  R_absdiff_mean
+                ALL    1 9010      1.098749      1.116646   1.016288 0.773575 0.770060 -0.003515        0.023980
+                ALL    4 9010      2.281562      2.316351   1.015248 0.774939 0.773454 -0.001486        0.014251
+                ALL   12 9010      4.060630      4.127474   1.016462 0.775633 0.774828 -0.000805        0.010150
+                ALL   24 9010      5.927929      6.033435   1.017798 0.778571 0.777695 -0.000876        0.008546
+HEADLINE[0.10,0.25)   24 1335      5.175518      5.271761   1.018596 0.790357 0.789800 -0.000557        0.008500
+
+cap(現貨,run8) = 0.0886% ；頭條格位 amp 比值 = 1.018596
+⇒ cap(永續 amp 代入, ΔR 不變) ≈ 0.0902%  vs 門檻 0.28%
+⇒ 要跨過 0.28% 需要 amp 比值 ≥ 3.1603（實測 1.0186）
