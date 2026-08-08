@@ -8,6 +8,27 @@
 
 ## 問題清單
 
+- **run29（2026-08-08，`audit`）— Q20：Q15 診斷復核——「900s Bash 單指令超時」
+  假說被 workflow log 實證推翻** — `[cells=0]`，非交易命題不消耗方向二 M。
+  Q15 自陳「該兩次運行的 `gh run view --log` 抓不到內容，未能直接讀到錯誤訊息」
+  （推論不是實證），本輪用 `gh api` 補上。
+  - **兩次唯二時長吻合 900s 的執行（2026-08-06 17:07/18:44）根本沒有 Claude
+    session 跑過**：annotation 為 `The job was not acquired by Runner of type
+    hosted even after multiple attempts`——GitHub 排程層取不到機器，與
+    aggTrades／Bash 完全無關。
+  - **7 個 ledger 標記為 Q11 `error` 的骨架中斷執行（run9/12/14/15/16/20/21）
+    全部是 GH 層級 `success`**，claude-code-action 自己的 `result` 事件顯示
+    `is_error:false`、`duration_ms` 全部落在 **172~464 秒**（遠低於 900s）、
+    `num_turns` 全部落在 **32~63**（遠低於 `--max-turns 80`），7 份 job log
+    全文搜尋無任何逾時／`timed out` 字樣 ⇒ **不是撞到 `BASH_MAX_TIMEOUT_MS`**。
+  - `permission_denials_count`（6 次 0、1 次 2）與 `num_turns`（分散無固定值）
+    皆不構成一致解釋 ⇒ **真正機制仍待查**，且目前 CI job log 只暴露
+    init／result 兩個事件，看不到逐輪 transcript，是本輪查證能力的天花板。
+  - **Q15 本身狀態不變**（仍 `open`，仍待人類裁決，本輪未修改任何 `.github/workflows/**`
+    或提出修法），但其「最可能的機制」段落需要更新——調高 timeout 這類修法方向
+    沒有對準已驗證的真正瓶頸。
+  - 詳見 `research/log/2026-08-08-run29.md`。
+
 - **run28（2026-08-08，`audit`）— Q19：Q10 的價格資料（現貨）與其判定門檻的
   成本模型（USDT-M 永續）標的不一致** — `[cells=0]`，方向二累計 M 維持 24。
   `docs/TRADEABILITY_PREREG.md` §3.3 自陳「Binance **USDT-M 永續**，VIP0」，
@@ -192,6 +213,17 @@
   numpy 計算（模型在等 Bash，不燒 token），加上 12 輪中僅 2 輪走 Opus 5，
   故**本迴圈的實際 token 成本遠低於輪次數給人的直覺**。
   空轉的代價主要是排程格與研究進度，不是額度。
+
+  **⚠ run29（Q20）補上的診斷修正（2026-08-08，`[cells=0]`）**：上方「最可能的機制」
+  （`BASH_MAX_TIMEOUT_MS=900000` 單指令 15 分鐘超時）**被 workflow log 實證推翻**。
+  唯二時長吻合 900s 的執行（2026-08-06 17:07/18:44）annotation 顯示 GitHub 排程層
+  「runner 未被排到」，Claude session 根本沒跑過，與 aggTrades/Bash 無關；而 7 個真正
+  對應「骨架中斷」的執行（run9/12/14/15/16/20/21）全部是 `is_error:false` 的乾淨結束，
+  `duration_ms` 172~464 秒、`num_turns` 32~63，都遠低於 900s／80 turns 上限，
+  log 全文無任何逾時字樣。**若未來要修 Q15，「調高 timeout」「限制單指令時長」這類
+  方向沒有對準已驗證的瓶頸**——真正機制仍未知，需要逐輪 transcript 級可觀測性
+  （目前 CI job log 只暴露 init/result 兩個事件）。詳見 `research/log/2026-08-08-run29.md`
+  與下方「已結案」Q20 條目。
 
 - **Q10 `probe` closed（2026-08-05 run 8，`weakens`，結局②）** — 結論見「已結案」段。
   **2026-08-06 run 13 已完成獨立復算稽核（Q13），裁決不變、不修訂**，唯一補充是一個
@@ -399,6 +431,23 @@
 | — | — | — | — |
 
 ## 已結案
+
+- **Q20**（closed 2026-08-08 run29，`audit`，**非交易命題，Q15 診斷段落被修正**）—
+  **Q15「最可能的機制」（900s Bash 單指令超時）復核：被 workflow log 實證推翻。**
+  `[cells=0]`。用 `gh api`／`gh run view` 補上 Q15 自陳「抓不到內容」的證據缺口。
+  - 唯二時長吻合 900s 的兩次執行（2026-08-06 17:07/18:44）annotation 為
+    `The job was not acquired by Runner of type hosted even after multiple
+    attempts`——GitHub 排程層問題，Claude session 從未啟動，與 aggTrades/Bash 無關。
+  - 7 個 ledger `error`（骨架中斷，run9/12/14/15/16/20/21）的 claude-code-action
+    `result` 事件全部 `is_error:false`、`duration_ms` 172~464 秒、`num_turns` 32~63
+    （上限分別 900s／80），皆遠低於各自上限，log 全文無逾時字樣 ⇒ 不是
+    `BASH_MAX_TIMEOUT_MS` 撞牆。`permission_denials_count`（6×0、1×2）與 `num_turns`
+    分散無固定值，皆非一致解釋。
+  - **真正機制仍未知**：CI job log 只暴露 claude-code-action 的 init／result 兩個
+    事件，無逐輪 transcript，是本輪查證能力天花板。
+  - Q15 本身狀態不變（`open`，待人類裁決，本輪未動 `.github/workflows/**`），
+    但其診斷段落需更新，修法前應先取得逐輪可觀測性再判斷真正瓶頸。
+  - 詳見 `research/log/2026-08-08-run29.md`。
 
 - **Q19**（closed 2026-08-08 run28，`audit`，**無新 directional 證據，Q10 裁決不變**）—
   **Q10 的價格資料（現貨）與其判定門檻的成本模型（USDT-M 永續）標的不一致。**
