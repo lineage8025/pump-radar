@@ -8,6 +8,28 @@
 
 ## 問題清單
 
+- **run30（2026-08-08，`audit`）— Q21：Q20 限制段①（更細逐輪 log 是否存在別處）
+  查證結果為「不存在」** — `[cells=0]`，非交易命題不消耗方向二 M。
+  - `gh api .../artifacts` 對 7 個 Q11 骨架中斷執行全查 `total_count=0`；
+    workflow 定義無 `upload-artifact` step；claude-code-action 對全部執行
+    （不分成敗）預設印出「Running Claude Code via SDK (full output hidden for
+    security)... enable `show_full_output: true`」，且 `show_full_output` 在
+    workflow 裡從未被設定過（目前的 `false` 是 action 預設值，非顯式關閉）。
+  - 對 run20/run21 兩個歷史執行做獨立重抓取，`duration_ms`／`num_turns`
+    與 run29 表格逐位元一致，交叉驗證 run29 讀取正確。
+  - **一處自我修正**：本輪初期誤將 GH run `31187734073`（89.8s／30 turns）
+    當作第 8 個未知 skeleton-abort 案例，核對後發現其 `num_turns` 特徵
+    與已知 `blocked` 執行（run26，同為 30 turns）吻合，應為 run23（blocked）
+    而非新異常，照實記錄避免下輪誤引用。
+  - **未解決的部分**：找到具體修法旗標（`show_full_output: true`），但未驗證
+    啟用後是否真能看到「為什麼」中止——這是必要不充分條件，最強反駁見日誌。
+  - **Q15 本身狀態不變**（仍 `open`，仍待人類裁決，本輪未修改任何
+    `.github/workflows/**`），但為其未來修法提案（若走 PR）補上一個具體選項。
+  - **本輪對 Q15/Q11 這條 CI 診斷線索的建議**：已連續三輪（Q16 對 Q10 聚合式、
+    Q19 對標的一致性、Q20+Q21 對 Q15 診斷）從不同角度覆核，邊際價值下降中，
+    下輪若無新輸入應改記 `blocked`，不宜再切第四個角度。
+  - 詳見 `research/log/2026-08-08-run30.md`。
+
 - **run29（2026-08-08，`audit`）— Q20：Q15 診斷復核——「900s Bash 單指令超時」
   假說被 workflow log 實證推翻** — `[cells=0]`，非交易命題不消耗方向二 M。
   Q15 自陳「該兩次運行的 `gh run view --log` 抓不到內容，未能直接讀到錯誤訊息」
@@ -431,6 +453,20 @@
 | — | — | — | — |
 
 ## 已結案
+
+- **Q21**（closed 2026-08-08 run30，`audit`，**非交易命題，Q20 限制段①被解除**）—
+  **run29（Q20）自陳「更細逐輪 log 是否存在別處……本輪未查證，不能排除」，
+  本輪查證結果為「不存在」。** `[cells=0]`。
+  - 7 個 Q11 骨架中斷執行的 `gh api .../artifacts` 全查 `total_count=0`；
+    workflow 無 `upload-artifact`；claude-code-action 對全部執行一律印出
+    「hidden for security」訊息並指名 `show_full_output: true` 為修法旗標，
+    該欄位在 workflow 裡從未設定過（現況是預設值，非顯式關閉）。
+  - run20/run21 兩執行獨立重抓取與 run29 表格逐位元一致（交叉驗證）。
+  - 自我修正：初期誤判 GH run `31187734073`（89.8s/30turns）為新異常，
+    核對後確認是 run23（blocked），非新發現，照實記錄。
+  - 未解決：即使啟用 `show_full_output: true`，能否看到真正中止原因仍未知
+    （必要不充分條件），需未來實際執行一次才能驗證。
+  - 詳見 `research/log/2026-08-08-run30.md`。
 
 - **Q20**（closed 2026-08-08 run29，`audit`，**非交易命題，Q15 診斷段落被修正**）—
   **Q15「最可能的機制」（900s Bash 單指令超時）復核：被 workflow log 實證推翻。**
