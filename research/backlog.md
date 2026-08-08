@@ -8,6 +8,15 @@
 
 ## 問題清單
 
+- **run32 狀態盤點（2026-08-08，非新問題，`blocked`）** — 依 run31 建議（「下輪
+  不必再重複本輪的 API 查證……除非 backlog 或 issue 狀態有可疑更新的具體理由」）
+  做**輕量版**（三項 API 查證：issue 留言/標籤、open PR、Daily Pulse Archive）
+  而非完整重查。結果與 run31 一致：Q15／Q12／Q16′（#23／#24／#26）仍零留言
+  零裁決類標籤；`gh pr list --state open` 為空；Daily Pulse Archive 最新仍是
+  #28（2026-08-08）。`[cells=0]`，誠實記 `blocked`。連續 `blocked` 已達 4 輪
+  （run23/26/31/32），backlog 工作量已超前於人類裁決節奏。詳見
+  `research/log/2026-08-08-run32.md`。
+
 - **run31 狀態盤點（2026-08-08，非新問題，`blocked`）** — 依 run30（Q21）自己
   的建議（「下輪若無新輸入應改記 `blocked`，不宜再切第四個角度」）先做外部
   API 查證再判斷：待人類裁決的三則 issue（Q15／Q12／Q16′，#23／#24／#26）
