@@ -1,0 +1,29 @@
+=== B. cap 欄重算核對（dR x amp_mean_pct vs run8 的 cap_pct 欄）===
+24 格 max|Δ| = 6.072e-16 pp
+
+=== A. 全網格最大值（run8 凍結 24 格）===
+cap 點估計最大      : 0.0886%  @ [0.10,0.25) x 24h (n=1335)
+cap 未調整 CI 上界最大: 0.1443%
+cap 調整後 CI 上界最大: 0.1838%  @ [0,0.05) x 24h
+
+=== C. 門檻 / cap 比值（>=10 才叫「差一個數量級」）===
+      reading  reading_pct      threshold  threshold_pct  ratio_threshold_over_cap  log10_ratio  is_one_order_of_magnitude
+cap_point_max     0.088602    prereg_0.28           0.28                    3.1602       0.4997                      False
+cap_point_max     0.088602 zero_slip_0.20           0.20                    2.2573       0.3536                      False
+cap_point_max     0.088602 no_margin_0.10           0.10                    1.1286       0.0526                      False
+ cap_hi95_max     0.144300    prereg_0.28           0.28                    1.9404       0.2879                      False
+ cap_hi95_max     0.144300 zero_slip_0.20           0.20                    1.3860       0.1418                      False
+ cap_hi95_max     0.144300 no_margin_0.10           0.10                    0.6930      -0.1593                      False
+cap_hiADJ_max     0.183811    prereg_0.28           0.28                    1.5233       0.1828                      False
+cap_hiADJ_max     0.183811 zero_slip_0.20           0.20                    1.0881       0.0367                      False
+cap_hiADJ_max     0.183811 no_margin_0.10           0.10                    0.5440      -0.2644                      False
+
+=== 附：24 格 cap 點估計降序前 5（供人工覆核）===
+     bucket  T_h    n       dR  amp_mean_pct  cap_pct  cap_hiADJ_pct
+[0.10,0.25)   24 1335 0.017119      5.175518 0.088602       0.178952
+   [0,0.05)   24  531 0.015676      4.266322 0.066879       0.183811
+   [0,0.05)   12  531 0.020362      2.815959 0.057340       0.137975
+[0.25,0.50)   24 2117 0.009984      5.547021 0.055380       0.136398
+[0.05,0.10)   24  459 0.006828      4.589156 0.031335       0.157755
+
+輸出：/home/runner/work/pump-radar/pump-radar/research/experiments/2026-08-08_q22_claims_audit.tsv

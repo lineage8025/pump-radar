@@ -1,0 +1,10 @@
+reading	reading_pct	threshold	threshold_pct	ratio_threshold_over_cap	log10_ratio	is_one_order_of_magnitude
+cap_point_max	0.088602	prereg_0.28	0.28	3.1602	0.4997	False
+cap_point_max	0.088602	zero_slip_0.20	0.2	2.2573	0.3536	False
+cap_point_max	0.088602	no_margin_0.10	0.1	1.1286	0.0526	False
+cap_hi95_max	0.1443	prereg_0.28	0.28	1.9404	0.2879	False
+cap_hi95_max	0.1443	zero_slip_0.20	0.2	1.386	0.1418	False
+cap_hi95_max	0.1443	no_margin_0.10	0.1	0.693	-0.1593	False
+cap_hiADJ_max	0.183811	prereg_0.28	0.28	1.5233	0.1828	False
+cap_hiADJ_max	0.183811	zero_slip_0.20	0.2	1.0881	0.0367	False
+cap_hiADJ_max	0.183811	no_margin_0.10	0.1	0.544	-0.2644	False
