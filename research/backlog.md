@@ -677,6 +677,37 @@
     ③A/B 分級各自的 forward 統計若需要，屬 `daily_pulse_dispatch.py` 的 tooling
     改動，agent 只能提案不能直接做。
 
+  ### ⚠ 2026-08-09 更正：run24 對 label／token 的三項推斷全部有誤（人類以 NAS log 實證）
+
+  run24 在**沒有讀到容器 log** 的情況下，從「issue 存在」反推 token 與 label 的狀態，
+  三項推斷經實證全錯。經 Portainer API（唯讀 GET）取得 `pump-radar-pulse` 容器 log：
+
+  ```
+  [pulse] archive_issue #38 close failed HTTP 403:
+  {"message":"Resource not accessible by personal access token", ...}
+  ```
+
+  | run24 的推斷 | 實證 |
+  |---|---|
+  | 「token scope 已由存檔本身間接證實**足夠**」 | ❌ **不足**。能 create，但 update／套 label 被 403 擋下 |
+  | 「`daily-pulse-archive` label **未建立**」 | ❌ label **早已存在**於 repo（2026-08-05 已用 `gh label list` 確認） |
+  | 「按 PR 說明**自動降級**（422 → 去 label 重試）」 | ❌ **降級路徑從未觸發**——log 中沒有 422 那行。是 GitHub 在權限不足時**靜默丟棄 labels**，create 本身沒報錯 |
+
+  **兩個症狀（無 label、未關閉）同一根因**：NAS 上的 fine-grained PAT 缺 issue 寫入權限。
+
+  - ⚠ **這個根因只有靠 2026-08-06 PR #18 加的 `_http_err_detail()` 才看得到**——
+    在那之前 log 只印例外字串。run24 是 8/07 執行的，理論上讀得到，但它**沒有去讀 log**，
+    而是從外部可見狀態反推。**教訓與 Q15 的 902 秒巧合同類：可觀測性沒到位時，
+    「合理推斷」與「事實」的距離比想像中大；有 log 就去讀 log。**
+  - **已執行的補救（2026-08-09，人類 token）**：7 則既有 archive issue
+    （#10/#11/#12/#16/#19/#28/#38）已補上 `daily-pulse-archive` label 並關閉。
+    驗證 `gh issue list --state closed --label daily-pulse-archive` 可查得全部 7 則
+    ⇒ **`archive_issue()` 原設計的查詢路徑現已可用**。
+  - **尚待人類（唯一剩項）**：把該 fine-grained PAT 的 **Issues 權限改為 Read and write**。
+    否則**日後每天新產生的 archive issue 仍會是無 label 且 open**。
+    修好之前，查詢請改用標題前綴 `Daily Pulse Archive:`。**程式端無需再改**——
+    `archive_issue()` 的降級與診斷邏輯都已到位，缺的純粹是權限。
+
 - **Q14**（closed 2026-08-07 run 18，`audit`，**無新 directional 證據**）— **Q10 對照組
   `R_flip` 的獨立實作復驗。** 本輪格位數 0，方向二累計 M 維持 24。
   補的是 run 13 §5 限制 1 自己點名的缺口：`ΔR = R_act − R_flip` 當時**只有被減數**
