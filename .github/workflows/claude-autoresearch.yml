@@ -44,9 +44,11 @@ env:
   # 排程自我啟停（台北日期，兩端皆含當日）。GitHub cron 沒有「從某天跑到某天」，
   # 所以用 gate step 控制——過早或過期都直接跳過、不喚醒 agent，
   # 不必靠人記得去 Enable / Disable workflow。手動 workflow_dispatch 不受此限。
-  # 2026-08-06 ~ 08-08 為每 2 小時制的試跑期（36 輪）；要續跑就改 SCHEDULE_UNTIL。
+  # 2026-08-06 ~ 08-08 為每 2 小時制的試跑期（36 輪），交易化階段於 08-08 收攤。
+  # 2026-08-14 起本 workflow 已 `gh workflow disable`，**真正的開關改由 enable/disable 負責**；
+  # 這裡放遠日期，避免日後 enable 回來卻被 gate 靜默擋掉（要限期再把 UNTIL 調回近日）。
   SCHEDULE_FROM: "2026-08-06"
-  SCHEDULE_UNTIL: "2026-08-08"
+  SCHEDULE_UNTIL: "2027-12-31"
 
 jobs:
   research:
